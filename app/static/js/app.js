@@ -16,6 +16,7 @@ document.getElementById('intake-form').addEventListener('submit', async (e) => {
     btn.classList.add('loading');
     btn.disabled = true;
 
+    const modeRadio = document.querySelector('input[name="mode"]:checked');
     const formData = {
         company_name: document.getElementById('company_name').value,
         company_url: document.getElementById('company_url')?.value || '',
@@ -27,6 +28,7 @@ document.getElementById('intake-form').addEventListener('submit', async (e) => {
         gtm_motion: document.getElementById('gtm_motion')?.value || '',
         current_challenges: document.getElementById('current_challenges').value,
         agents: Array.from(document.querySelectorAll('.agent-card input:checked')).map(cb => cb.value),
+        mode: modeRadio ? modeRadio.value : 'free',
     };
 
     sessionStorage.setItem('coldstart_input', JSON.stringify(formData));

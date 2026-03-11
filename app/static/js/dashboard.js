@@ -1,12 +1,15 @@
 /**
- * Cold Start AI — Dashboard v2
- * GTM Execution Engine. Runs agents, produces deliverables.
+ * Cold Start AI — Dashboard v3
+ * Two modes:
+ *   FREE: Agents run independently (same context)
+ *   PRO:  Agents chain — each builds on the last + vertical intelligence
  */
 
 const input = JSON.parse(sessionStorage.getItem('coldstart_input') || '{}');
 const results = {};
 let activeAgent = null;
 let completedCount = 0;
+const mode = input.mode || 'free'; // 'free' or 'pro'
 
 if (!input.company_name) {
     window.location.href = '/launch';
@@ -14,6 +17,10 @@ if (!input.company_name) {
 
 document.getElementById('company-badge').textContent = `GTM SYSTEM FOR: ${input.company_name.toUpperCase()}`;
 document.getElementById('progress-total').textContent = input.agents ? input.agents.length : 0;
+
+// Show mode indicator
+const modeLabel = mode === 'pro' ? 'PRO — Chained Agents + Vertical Intelligence' : 'FREE — Independent Agents';
+document.getElementById('active-agent-tagline').textContent = modeLabel;
 
 const companyContext = `
 COMPANY: ${input.company_name}
@@ -79,7 +86,8 @@ function setAgentStatus(agentId, status) {
     }
 }
 
-async function runAgents() {
+// ============ FREE MODE: Sequential, no chaining ============
+async function runAgentsFree() {
     const agents = input.agents || [];
 
     for (let i = 0; i < agents.length; i++) {
@@ -101,9 +109,7 @@ async function runAgents() {
             results[agentId] = data;
             setAgentStatus(agentId, data.status);
 
-            if (activeAgent === agentId) {
-                showAgent(agentId);
-            }
+            if (activeAgent === agentId) showAgent(agentId);
         } catch (err) {
             results[agentId] = {
                 name: agentId, icon: '⚠️', status: 'error',
@@ -113,16 +119,82 @@ async function runAgents() {
         }
     }
 
-    // All done
+    onAllComplete();
+}
+
+// ============ PRO MODE: Chained, layered execution ============
+async function runAgentsPro() {
+    const agents = input.agents || [];
+
+    // Get execution plan from server
+    let plan;
+    try {
+        const planRes = await fetch(`/api/execution-plan?agents=${agents.join(',')}`);
+        const planData = await planRes.json();
+        plan = planData.plan;
+    } catch {
+        // Fallback to sequential
+        plan = agents.map(a => [a]);
+    }
+
+    // Collect outputs for chaining
+    const chainedOutputs = {};
+
+    for (const layer of plan) {
+        // Mark all agents in this layer as running
+        layer.forEach(agentId => setAgentStatus(agentId, 'running'));
+
+        if (!activeAgent || !results[activeAgent]) {
+            showAgent(layer[0]);
+        }
+
+        // Run all agents in this layer in parallel
+        const layerPromises = layer.map(async (agentId) => {
+            try {
+                const response = await fetch('/api/generate-chained', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        agent_id: agentId,
+                        company_context: companyContext,
+                        previous_outputs: chainedOutputs,
+                        product_description: input.product_description,
+                        business_model: input.business_model,
+                        target_market: input.target_market,
+                    }),
+                });
+
+                const data = await response.json();
+                results[agentId] = data;
+                chainedOutputs[agentId] = data.content;
+                setAgentStatus(agentId, data.status);
+
+                if (activeAgent === agentId) showAgent(agentId);
+            } catch (err) {
+                results[agentId] = {
+                    name: agentId, icon: '⚠️', status: 'error',
+                    content: `Network error: ${err.message}`,
+                };
+                setAgentStatus(agentId, 'error');
+            }
+        });
+
+        // Wait for entire layer to complete before moving to next
+        await Promise.all(layerPromises);
+    }
+
+    onAllComplete();
+}
+
+function onAllComplete() {
     document.getElementById('status-text').textContent = `All ${completedCount} agents complete`;
     document.querySelector('#global-status .status-dot').classList.remove('running');
     document.getElementById('export-all-btn').style.display = 'block';
 }
 
-// Export single agent
+// Export functions
 async function exportSingle() {
     if (!activeAgent || !results[activeAgent]) return;
-
     const response = await fetch('/api/export-single', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -132,17 +204,10 @@ async function exportSingle() {
             company_name: input.company_name,
         }),
     });
-
     const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `coldstart-${activeAgent}-${input.company_name.toLowerCase().replace(/\s+/g, '-')}.md`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(blob, `coldstart-${activeAgent}-${slug(input.company_name)}.md`);
 }
 
-// Export all
 async function exportAll() {
     const response = await fetch('/api/export', {
         method: 'POST',
@@ -150,16 +215,29 @@ async function exportAll() {
         body: JSON.stringify({
             company_name: input.company_name,
             results: results,
+            mode: mode,
         }),
     });
-
     const blob = await response.blob();
+    downloadBlob(blob, `coldstart-gtm-${slug(input.company_name)}.md`);
+}
+
+function downloadBlob(blob, filename) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `coldstart-gtm-${input.company_name.toLowerCase().replace(/\s+/g, '-')}.md`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
 }
 
-runAgents();
+function slug(s) {
+    return s.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+}
+
+// Start based on mode
+if (mode === 'pro') {
+    runAgentsPro();
+} else {
+    runAgentsFree();
+}
