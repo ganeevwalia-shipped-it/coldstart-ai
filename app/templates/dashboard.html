@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cold Start AI — War Room</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body class="dashboard-body">
+    <div class="noise"></div>
+
+    <nav class="topbar">
+        <a href="/" class="logo">
+            <span class="logo-icon">◆</span>
+            <span class="logo-text">COLD START</span>
+            <span class="logo-ai">AI</span>
+        </a>
+        <div class="nav-status" id="global-status">
+            <span class="status-dot running"></span>
+            <span id="status-text">Deploying agents...</span>
+        </div>
+    </nav>
+
+    <div class="dashboard-layout">
+        <!-- Sidebar: Agent List -->
+        <aside class="agent-sidebar">
+            <div class="sidebar-header">
+                <h3>Agent Roster</h3>
+                <div class="progress-ring" id="progress-ring">
+                    <span id="progress-count">0</span>/<span id="progress-total">12</span>
+                </div>
+            </div>
+            <div class="agent-list" id="agent-list">
+                {% for agent_id in agent_order %}
+                {% set agent = agents[agent_id] %}
+                <button class="agent-list-item" data-agent="{{ agent_id }}" onclick="showAgent('{{ agent_id }}')">
+                    <span class="agent-list-icon">{{ agent.icon }}</span>
+                    <span class="agent-list-name">{{ agent.name }}</span>
+                    <span class="agent-list-status" id="status-{{ agent_id }}">
+                        <span class="status-pending">○</span>
+                    </span>
+                </button>
+                {% endfor %}
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            <div class="dashboard-header" id="dashboard-header">
+                <div class="company-badge" id="company-badge"></div>
+                <h1 id="active-agent-name">Deploying your GTM war room...</h1>
+                <p id="active-agent-tagline">Each agent is analyzing your product independently.</p>
+            </div>
+
+            <div class="agent-output" id="agent-output">
+                <div class="loading-state" id="loading-state">
+                    <div class="loader">
+                        <div class="loader-bar"></div>
+                    </div>
+                    <p>Agents are working...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>
