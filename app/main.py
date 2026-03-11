@@ -1,17 +1,19 @@
 """
-Cold Start AI — Main Application
-The GTM war room. 12 specialist agents. Zero fluff.
+Cold Start AI — GTM Execution Engine
+Not a strategy generator. An operating system for launching products.
 """
 import os
 import json
 import asyncio
-from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse, JSONResponse
+import io
+from datetime import datetime
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from anthropic import AsyncAnthropic
 
-from app.agents.registry import AGENTS, AGENT_ORDER
+from app.agents.registry import AGENTS, AGENT_ORDER, CATEGORIES
 
 app = FastAPI(title="Cold Start AI")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -28,11 +30,22 @@ def get_client():
 
 
 @app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    return templates.TemplateResponse("index.html", {
+async def landing(request: Request):
+    return templates.TemplateResponse("landing.html", {
         "request": request,
         "agents": AGENTS,
         "agent_order": AGENT_ORDER,
+        "categories": CATEGORIES,
+    })
+
+
+@app.get("/launch", response_class=HTMLResponse)
+async def intake(request: Request):
+    return templates.TemplateResponse("intake.html", {
+        "request": request,
+        "agents": AGENTS,
+        "agent_order": AGENT_ORDER,
+        "categories": CATEGORIES,
     })
 
 
@@ -42,88 +55,17 @@ async def dashboard(request: Request):
         "request": request,
         "agents": AGENTS,
         "agent_order": AGENT_ORDER,
+        "categories": CATEGORIES,
     })
 
 
-@app.post("/api/generate")
-async def generate(request: Request):
-    body = await request.json()
-    company_name = body.get("company_name", "")
-    product_description = body.get("product_description", "")
-    target_market = body.get("target_market", "")
-    stage = body.get("stage", "")
-    business_model = body.get("business_model", "")
-    current_challenges = body.get("current_challenges", "")
-    selected_agents = body.get("agents", AGENT_ORDER)
-
-    company_context = f"""
-COMPANY: {company_name}
-PRODUCT: {product_description}
-TARGET MARKET: {target_market}
-STAGE: {stage}
-BUSINESS MODEL: {business_model}
-CURRENT CHALLENGES: {current_challenges}
-"""
-
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    if not api_key:
-        # Demo mode — return structured placeholder results
-        results = {}
-        for agent_id in selected_agents:
-            if agent_id in AGENTS:
-                agent = AGENTS[agent_id]
-                results[agent_id] = {
-                    "name": agent["name"],
-                    "icon": agent["icon"],
-                    "status": "demo",
-                    "content": f"## {agent['icon']} {agent['name']}\n\n"
-                               f"*{agent['tagline']}*\n\n"
-                               f"**Demo Mode** — Add your `ANTHROPIC_API_KEY` environment variable to get real AI-generated GTM strategy.\n\n"
-                               f"This agent would analyze your company and produce a deep, specialized {agent['name'].lower()} strategy based on:\n\n"
-                               f"- Company: {company_name}\n"
-                               f"- Product: {product_description}\n"
-                               f"- Market: {target_market}\n"
-                               f"- Stage: {stage}\n"
-                }
-        return JSONResponse({"status": "demo", "results": results})
-
-    # Run all selected agents concurrently
-    async def run_agent(agent_id):
-        agent = AGENTS[agent_id]
-        try:
-            message = await get_client().messages.create(
-                model="claude-sonnet-4-20250514",
-                max_tokens=4000,
-                messages=[{
-                    "role": "user",
-                    "content": f"{agent['prompt']}\n\n---\n\nHere is the company information:\n{company_context}"
-                }]
-            )
-            content = message.content[0].text
-            return agent_id, {
-                "name": agent["name"],
-                "icon": agent["icon"],
-                "status": "complete",
-                "content": content,
-            }
-        except Exception as e:
-            return agent_id, {
-                "name": agent["name"],
-                "icon": agent["icon"],
-                "status": "error",
-                "content": f"Error: {str(e)}",
-            }
-
-    tasks = [run_agent(aid) for aid in selected_agents if aid in AGENTS]
-    completed = await asyncio.gather(*tasks)
-    results = {agent_id: result for agent_id, result in completed}
-
-    return JSONResponse({"status": "complete", "results": results})
+@app.get("/pricing", response_class=HTMLResponse)
+async def pricing(request: Request):
+    return templates.TemplateResponse("pricing.html", {"request": request})
 
 
 @app.post("/api/generate-single")
 async def generate_single(request: Request):
-    """Run a single agent — used for streaming one at a time."""
     body = await request.json()
     agent_id = body.get("agent_id", "")
     company_context = body.get("company_context", "")
@@ -140,13 +82,14 @@ async def generate_single(request: Request):
             "agent_id": agent_id,
             "name": agent["name"],
             "icon": agent["icon"],
-            "content": f"## {agent['icon']} {agent['name']}\n\n*{agent['tagline']}*\n\n**Demo Mode** — Add your ANTHROPIC_API_KEY to unlock real results."
+            "deliverable": agent["deliverable"],
+            "content": generate_demo_content(agent_id, agent, company_context),
         })
 
     try:
         message = await get_client().messages.create(
             model="claude-sonnet-4-20250514",
-            max_tokens=4000,
+            max_tokens=6000,
             messages=[{
                 "role": "user",
                 "content": f"{agent['prompt']}\n\n---\n\nHere is the company information:\n{company_context}"
@@ -157,6 +100,7 @@ async def generate_single(request: Request):
             "agent_id": agent_id,
             "name": agent["name"],
             "icon": agent["icon"],
+            "deliverable": agent["deliverable"],
             "content": message.content[0].text,
         })
     except Exception as e:
@@ -167,3 +111,118 @@ async def generate_single(request: Request):
             "icon": agent["icon"],
             "content": f"Error: {str(e)}",
         })
+
+
+@app.post("/api/export")
+async def export_results(request: Request):
+    """Export all results as a single markdown document."""
+    body = await request.json()
+    company_name = body.get("company_name", "Company")
+    results = body.get("results", {})
+
+    doc = f"""# Cold Start AI — GTM Execution Package
+## {company_name}
+### Generated {datetime.now().strftime('%B %d, %Y')}
+
+---
+
+"""
+    for agent_id in AGENT_ORDER:
+        if agent_id in results and results[agent_id].get("content"):
+            r = results[agent_id]
+            doc += f"\n\n---\n\n# {r.get('icon', '')} {r.get('name', agent_id)}\n\n"
+            doc += r["content"]
+            doc += "\n"
+
+    doc += f"""
+
+---
+
+*Generated by Cold Start AI — The GTM Execution Engine*
+*{datetime.now().strftime('%B %d, %Y')}*
+"""
+
+    buffer = io.BytesIO(doc.encode("utf-8"))
+    filename = f"coldstart-gtm-{company_name.lower().replace(' ', '-')}-{datetime.now().strftime('%Y%m%d')}.md"
+
+    return StreamingResponse(
+        buffer,
+        media_type="text/markdown",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@app.post("/api/export-single")
+async def export_single(request: Request):
+    """Export a single agent's output."""
+    body = await request.json()
+    agent_id = body.get("agent_id", "")
+    content = body.get("content", "")
+    company_name = body.get("company_name", "Company")
+
+    agent = AGENTS.get(agent_id, {})
+    name = agent.get("name", agent_id)
+
+    doc = f"""# {agent.get('icon', '')} {name}
+## {company_name}
+### Generated by Cold Start AI — {datetime.now().strftime('%B %d, %Y')}
+
+---
+
+{content}
+
+---
+
+*Generated by Cold Start AI*
+"""
+    buffer = io.BytesIO(doc.encode("utf-8"))
+    filename = f"coldstart-{agent_id}-{company_name.lower().replace(' ', '-')}.md"
+
+    return StreamingResponse(
+        buffer,
+        media_type="text/markdown",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+def generate_demo_content(agent_id, agent, company_context):
+    """Generate rich demo content that shows the format of real output."""
+    company_name = "Your Company"
+    for line in company_context.split("\n"):
+        if line.startswith("COMPANY:"):
+            company_name = line.replace("COMPANY:", "").strip() or "Your Company"
+            break
+
+    return f"""## {agent['icon']} {agent['name']} — {agent['deliverable']}
+
+*{agent['tagline']}*
+
+---
+
+### This is Demo Mode
+
+When you add your `ANTHROPIC_API_KEY`, this agent will produce a **complete {agent['deliverable']}** for **{company_name}**, including:
+
+{agent.get('description', '')}
+
+**Deliverable format:** {agent.get('deliverable_format', 'Document')}
+
+---
+
+### What You'll Get
+
+This agent doesn't just give advice — it produces **ready-to-use assets** that you can download and deploy immediately:
+
+- Complete document formatted for your team
+- Copy-paste ready templates and scripts
+- Specific numbers, targets, and benchmarks
+- Actionable checklists and frameworks
+
+---
+
+> **To activate:** Set the `ANTHROPIC_API_KEY` environment variable and re-run your launch.
+
+```bash
+export ANTHROPIC_API_KEY=your-key-here
+```
+"""

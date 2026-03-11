@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cold Start AI — The GTM Execution Engine</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="noise"></div>
+    <div class="grid-bg"></div>
+
+    <nav class="topbar">
+        <div class="logo">
+            <span class="logo-icon">◆</span>
+            <span class="logo-text">COLD START</span>
+            <span class="logo-ai">AI</span>
+        </div>
+        <div class="nav-links">
+            <a href="/pricing" class="nav-link">Pricing</a>
+            <a href="/launch" class="nav-cta">Launch Your GTM</a>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <section class="landing-hero">
+        <div class="hero-content">
+            <div class="hero-badge">THE GTM EXECUTION ENGINE</div>
+            <h1>Stop planning.<br><span class="gradient-text">Start launching.</span></h1>
+            <p class="hero-sub">
+                14 AI agents build your entire go-to-market system in minutes.
+                Not strategy decks. <strong>Executable deliverables.</strong>
+                Outbound sequences. Sales scripts. Launch plans. Content calendars.
+                Everything you need to go from zero to pipeline.
+            </p>
+            <div class="hero-ctas">
+                <a href="/launch" class="btn-primary">Build Your GTM System</a>
+                <a href="#how-it-works" class="btn-secondary">See How It Works</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- PROBLEM -->
+    <section class="section-dark">
+        <div class="container">
+            <div class="problem-grid">
+                <div class="problem-text">
+                    <div class="section-badge">THE PROBLEM</div>
+                    <h2>Founders don't need more strategy.<br>They need <span class="gradient-text">infrastructure.</span></h2>
+                    <p>You've read the blog posts. Watched the YouTube videos. Maybe even hired a consultant. You know what "good GTM" looks like in theory.</p>
+                    <p>But you still don't have:</p>
+                </div>
+                <div class="problem-list">
+                    <div class="problem-item">
+                        <span class="problem-x">✗</span>
+                        <span>A clear ICP with actual prospecting searches</span>
+                    </div>
+                    <div class="problem-item">
+                        <span class="problem-x">✗</span>
+                        <span>Cold email sequences ready to send</span>
+                    </div>
+                    <div class="problem-item">
+                        <span class="problem-x">✗</span>
+                        <span>A sales script for your first demo call</span>
+                    </div>
+                    <div class="problem-item">
+                        <span class="problem-x">✗</span>
+                        <span>Pricing that's backed by analysis, not guessing</span>
+                    </div>
+                    <div class="problem-item">
+                        <span class="problem-x">✗</span>
+                        <span>A CRM pipeline that actually fits your sales motion</span>
+                    </div>
+                    <div class="problem-item">
+                        <span class="problem-x">✗</span>
+                        <span>Automation workflows that do the work while you sleep</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="section" id="how-it-works">
+        <div class="container">
+            <div class="section-badge">HOW IT WORKS</div>
+            <h2 class="section-title">Three steps to a complete GTM system</h2>
+
+            <div class="steps-grid">
+                <div class="step-card">
+                    <div class="step-number">01</div>
+                    <h3>Input Your Product</h3>
+                    <p>Tell us what you're building, who it's for, and where you are. Takes 2 minutes.</p>
+                </div>
+                <div class="step-arrow">→</div>
+                <div class="step-card">
+                    <div class="step-number">02</div>
+                    <h3>14 Agents Deploy</h3>
+                    <p>Each specialist agent independently builds their piece of your GTM system. No generic advice — real deliverables.</p>
+                </div>
+                <div class="step-arrow">→</div>
+                <div class="step-card">
+                    <div class="step-number">03</div>
+                    <h3>Download & Execute</h3>
+                    <p>Get a complete GTM package: scripts, templates, sequences, plans, and workflows. Ready to use today.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- DELIVERABLES -->
+    <section class="section-dark">
+        <div class="container">
+            <div class="section-badge">NOT ADVICE — DELIVERABLES</div>
+            <h2 class="section-title">What you actually get</h2>
+            <p class="section-sub">Every agent produces a downloadable, executable asset. Not a strategy deck.</p>
+
+            <div class="deliverables-grid">
+                {% for cat_name, cat in categories.items() %}
+                <div class="deliverable-category">
+                    <h3 class="cat-name">{{ cat_name }}</h3>
+                    <p class="cat-desc">{{ cat.description }}</p>
+                    {% for agent_id in cat.agents %}
+                    {% set agent = agents[agent_id] %}
+                    <div class="deliverable-item">
+                        <span class="deliverable-icon">{{ agent.icon }}</span>
+                        <div class="deliverable-info">
+                            <div class="deliverable-name">{{ agent.deliverable }}</div>
+                            <div class="deliverable-format">{{ agent.deliverable_format }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <!-- AGENTS -->
+    <section class="section">
+        <div class="container">
+            <div class="section-badge">14 SPECIALIST AGENTS</div>
+            <h2 class="section-title">Each one obsessively good at <span class="gradient-text">one thing</span></h2>
+            <p class="section-sub">Not a generalist AI. A team of world-class specialists, each trained on their domain.</p>
+
+            <div class="agents-showcase">
+                {% for agent_id in agent_order %}
+                {% set agent = agents[agent_id] %}
+                <div class="agent-showcase-card">
+                    <div class="agent-showcase-icon">{{ agent.icon }}</div>
+                    <div class="agent-showcase-content">
+                        <div class="agent-showcase-name">{{ agent.name }}</div>
+                        <div class="agent-showcase-tagline">{{ agent.tagline }}</div>
+                    </div>
+                    <div class="agent-showcase-cat">{{ agent.category }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="section-cta">
+        <div class="container">
+            <h2>Your competitors are planning.<br><span class="gradient-text">You should be launching.</span></h2>
+            <p>Build your complete GTM system in minutes, not months.</p>
+            <a href="/launch" class="btn-primary btn-large">Build Your GTM System →</a>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="container footer-inner">
+            <div class="logo">
+                <span class="logo-icon">◆</span>
+                <span class="logo-text">COLD START</span>
+                <span class="logo-ai">AI</span>
+            </div>
+            <p class="footer-text">The operating system for launching products.</p>
+        </div>
+    </footer>
+</body>
+</html>

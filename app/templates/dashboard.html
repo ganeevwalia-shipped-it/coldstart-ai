@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cold Start AI — War Room</title>
+    <title>Cold Start AI — GTM War Room</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -18,9 +18,14 @@
             <span class="logo-text">COLD START</span>
             <span class="logo-ai">AI</span>
         </a>
-        <div class="nav-status" id="global-status">
-            <span class="status-dot running"></span>
-            <span id="status-text">Deploying agents...</span>
+        <div class="nav-actions">
+            <div class="nav-status" id="global-status">
+                <span class="status-dot running"></span>
+                <span id="status-text">Building GTM system...</span>
+            </div>
+            <button class="export-all-btn" id="export-all-btn" onclick="exportAll()" style="display:none;">
+                Download Full Package ↓
+            </button>
         </div>
     </nav>
 
@@ -28,13 +33,15 @@
         <!-- Sidebar: Agent List -->
         <aside class="agent-sidebar">
             <div class="sidebar-header">
-                <h3>Agent Roster</h3>
+                <h3>Agents</h3>
                 <div class="progress-ring" id="progress-ring">
-                    <span id="progress-count">0</span>/<span id="progress-total">12</span>
+                    <span id="progress-count">0</span>/<span id="progress-total">14</span>
                 </div>
             </div>
             <div class="agent-list" id="agent-list">
-                {% for agent_id in agent_order %}
+                {% for cat_name, cat in categories.items() %}
+                <div class="sidebar-category">{{ cat_name }}</div>
+                {% for agent_id in cat.agents %}
                 {% set agent = agents[agent_id] %}
                 <button class="agent-list-item" data-agent="{{ agent_id }}" onclick="showAgent('{{ agent_id }}')">
                     <span class="agent-list-icon">{{ agent.icon }}</span>
@@ -44,15 +51,25 @@
                     </span>
                 </button>
                 {% endfor %}
+                {% endfor %}
             </div>
         </aside>
 
         <!-- Main Content -->
         <main class="dashboard-main">
             <div class="dashboard-header" id="dashboard-header">
-                <div class="company-badge" id="company-badge"></div>
-                <h1 id="active-agent-name">Deploying your GTM war room...</h1>
-                <p id="active-agent-tagline">Each agent is analyzing your product independently.</p>
+                <div class="header-top">
+                    <div>
+                        <div class="company-badge" id="company-badge"></div>
+                        <h1 id="active-agent-name">Building your GTM system...</h1>
+                        <p id="active-agent-tagline">Each agent is independently analyzing your product.</p>
+                    </div>
+                    <div class="header-actions" id="header-actions" style="display:none;">
+                        <button class="btn-export" onclick="exportSingle()">
+                            Download This ↓
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div class="agent-output" id="agent-output">
@@ -60,7 +77,7 @@
                     <div class="loader">
                         <div class="loader-bar"></div>
                     </div>
-                    <p>Agents are working...</p>
+                    <p>Agents are working on your GTM system...</p>
                 </div>
             </div>
         </main>
