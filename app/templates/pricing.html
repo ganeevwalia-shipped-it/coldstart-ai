@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cold Start AI — Pricing</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/pricing.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 </head>
@@ -26,104 +27,393 @@
 
     <main class="pricing-page">
         <div class="container">
-            <div class="section-badge">PRICING</div>
-            <h1 class="section-title">GTM infrastructure,<br><span class="gradient-text">not consulting invoices.</span></h1>
-            <p class="section-sub">One run builds what a consultant takes weeks to deliver. And you can iterate forever.</p>
+            <!-- Header -->
+            <div class="pricing-hero">
+                <div class="section-badge">PRICING</div>
+                <h1 class="section-title">GTM infrastructure,<br><span class="gradient-text">not consulting invoices.</span></h1>
+                <p class="section-sub">One run builds what a consultant takes weeks to deliver. Start free, upgrade when you need the full spacecraft.</p>
 
-            <div class="pricing-grid">
-                <!-- FREE -->
-                <div class="pricing-card">
-                    <div class="pricing-tier">Free</div>
-                    <div class="pricing-price">
-                        <span class="price-amount">$0</span>
-                        <span class="price-unit">forever</span>
-                    </div>
-                    <p class="pricing-desc">The gateway. 14 specialist agents build your GTM system. No credit card.</p>
-
-                    <ul class="pricing-features">
-                        <li>14 specialist agents</li>
-                        <li>Full GTM execution package</li>
-                        <li>Downloadable deliverables</li>
-                        <li>ICP, positioning, outbound, content</li>
-                        <li>Sales scripts, pricing, launch plan</li>
-                        <li>3 runs per month</li>
-                    </ul>
-
-                    <a href="/launch" class="pricing-cta">Start Free</a>
-                </div>
-
-                <!-- PRO -->
-                <div class="pricing-card featured">
-                    <div class="pricing-popular">MOST POPULAR</div>
-                    <div class="pricing-tier">Pro</div>
-                    <div class="pricing-price">
-                        <span class="price-amount">$99</span>
-                        <span class="price-unit">/month</span>
-                    </div>
-                    <p class="pricing-desc">The chained war room. Agents build on each other. Vertical-specific intelligence. 10x more specific output.</p>
-
-                    <ul class="pricing-features">
-                        <li><strong>Everything in Free, plus:</strong></li>
-                        <li>Agent chaining (ICP → outbound → sales)</li>
-                        <li>Vertical-specific GTM playbooks</li>
-                        <li>Auto-detected industry intelligence</li>
-                        <li>Unlimited runs</li>
-                        <li>Cross-referenced deliverables</li>
-                        <li>Parallel layer execution</li>
-                        <li>Priority speed</li>
-                        <li>Export to Notion / Google Docs</li>
-                    </ul>
-
-                    <a href="/launch" class="pricing-cta featured-cta">Go Pro</a>
-                </div>
-
-                <!-- SPACECRAFT -->
-                <div class="pricing-card">
-                    <div class="pricing-tier">Spacecraft</div>
-                    <div class="pricing-price">
-                        <span class="price-amount">$499</span>
-                        <span class="price-unit">/month</span>
-                    </div>
-                    <p class="pricing-desc">Complete 0→1 GTM infrastructure. Living system that evolves with your company. The full spacecraft.</p>
-
-                    <ul class="pricing-features">
-                        <li><strong>Everything in Pro, plus:</strong></li>
-                        <li>Website + competitor auto-scraping</li>
-                        <li>Real lead list generation (Clay/Apollo)</li>
-                        <li>Weekly strategy auto-refresh</li>
-                        <li>ICP evolution tracking over time</li>
-                        <li>Competitive signal monitoring</li>
-                        <li>CRM auto-setup (HubSpot/Attio)</li>
-                        <li>Automation workflow deployment</li>
-                        <li>Multi-product support</li>
-                        <li>Team access (5 seats)</li>
-                        <li>Slack alerts for GTM signals</li>
-                    </ul>
-
-                    <a href="/launch" class="pricing-cta">Launch Spacecraft</a>
+                <!-- Billing Toggle -->
+                <div class="billing-toggle">
+                    <button class="toggle-option active" data-period="monthly" onclick="setBilling('monthly')">Monthly</button>
+                    <button class="toggle-option" data-period="annual" onclick="setBilling('annual')">
+                        Annual
+                        <span class="save-badge">Save 20%</span>
+                    </button>
                 </div>
             </div>
 
-            <!-- Comparison -->
-            <div class="pricing-compare">
-                <h3>vs. the alternative</h3>
-                <div class="compare-grid">
-                    <div class="compare-item">
-                        <div class="compare-label">GTM Consultant</div>
-                        <div class="compare-value bad">$15,000 - $50,000</div>
-                        <div class="compare-time">6-12 weeks</div>
+            <!-- Pricing Cards -->
+            <div class="pricing-grid-v2">
+
+                <!-- FREE -->
+                <div class="price-card" data-tier="free">
+                    <div class="card-header">
+                        <div class="tier-icon">◇</div>
+                        <div class="tier-name">Free</div>
+                        <div class="tier-label">THE GATEWAY</div>
                     </div>
-                    <div class="compare-item">
-                        <div class="compare-label">Hire a Head of Marketing</div>
-                        <div class="compare-value bad">$150,000+/year</div>
-                        <div class="compare-time">3 months to ramp</div>
+
+                    <div class="card-price">
+                        <div class="price-row">
+                            <span class="price-dollar">$</span>
+                            <span class="price-value" data-monthly="0" data-annual="0">0</span>
+                        </div>
+                        <div class="price-period">forever — no credit card</div>
                     </div>
-                    <div class="compare-item highlight">
-                        <div class="compare-label">Cold Start AI</div>
-                        <div class="compare-value good">$0 to start</div>
-                        <div class="compare-time">15 minutes</div>
+
+                    <p class="card-desc">14 specialist agents build your complete GTM system. Independent mode. 3 runs per month. No strings.</p>
+
+                    <a href="/launch" class="card-cta">Start Free</a>
+
+                    <div class="card-features">
+                        <div class="features-label">What's included</div>
+                        <ul>
+                            <li class="included">14 specialist GTM agents</li>
+                            <li class="included">ICP document + buyer personas</li>
+                            <li class="included">Positioning bible</li>
+                            <li class="included">Outbound sequences (email + LinkedIn)</li>
+                            <li class="included">Sales playbook + objection handling</li>
+                            <li class="included">30-day content calendar</li>
+                            <li class="included">Pricing architecture</li>
+                            <li class="included">Launch playbook</li>
+                            <li class="included">CRM setup guide</li>
+                            <li class="included">Downloadable deliverables (Markdown)</li>
+                            <li class="included">3 runs per month</li>
+                            <li class="excluded">Agent chaining</li>
+                            <li class="excluded">Vertical-specific intelligence</li>
+                            <li class="excluded">Data enrichment & scraping</li>
+                        </ul>
                     </div>
                 </div>
+
+                <!-- PRO -->
+                <div class="price-card featured" data-tier="pro">
+                    <div class="popular-badge">MOST POPULAR</div>
+                    <div class="card-header">
+                        <div class="tier-icon">◆</div>
+                        <div class="tier-name">Pro</div>
+                        <div class="tier-label">THE CHAINED WAR ROOM</div>
+                    </div>
+
+                    <div class="card-price">
+                        <div class="price-row">
+                            <span class="price-dollar">$</span>
+                            <span class="price-value" data-monthly="99" data-annual="79">99</span>
+                            <span class="price-mo">/mo</span>
+                        </div>
+                        <div class="price-period">
+                            <span class="period-monthly">billed monthly</span>
+                            <span class="period-annual" style="display:none">$948/yr — billed annually</span>
+                        </div>
+                    </div>
+
+                    <p class="card-desc">Agents build on each other. ICP feeds positioning feeds outbound feeds sales. Vertical-specific intelligence. 10x more specific output.</p>
+
+                    <button class="card-cta card-cta-primary" onclick="checkout('pro')">Go Pro</button>
+
+                    <div class="card-features">
+                        <div class="features-label">Everything in Free, plus</div>
+                        <ul>
+                            <li class="included highlight">Agent chaining (ICP &rarr; outbound &rarr; sales)</li>
+                            <li class="included highlight">Vertical-specific GTM playbooks</li>
+                            <li class="included highlight">Auto-detected industry intelligence</li>
+                            <li class="included">Unlimited runs</li>
+                            <li class="included">Cross-referenced deliverables</li>
+                            <li class="included">Parallel layer execution</li>
+                            <li class="included">Priority generation speed</li>
+                            <li class="included">Export to Notion / Google Docs</li>
+                            <li class="included">Downloadable GTM package (PDF + MD)</li>
+                            <li class="included">Re-run as your product evolves</li>
+                            <li class="excluded">Website & competitor scraping</li>
+                            <li class="excluded">Lead list generation</li>
+                            <li class="excluded">CRM auto-setup</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- SPACECRAFT -->
+                <div class="price-card" data-tier="spacecraft">
+                    <div class="card-header">
+                        <div class="tier-icon spacecraft-icon">◈</div>
+                        <div class="tier-name">Spacecraft</div>
+                        <div class="tier-label">THE FULL 0&rarr;1 GTM</div>
+                    </div>
+
+                    <div class="card-price">
+                        <div class="price-row">
+                            <span class="price-dollar">$</span>
+                            <span class="price-value" data-monthly="499" data-annual="399">499</span>
+                            <span class="price-mo">/mo</span>
+                        </div>
+                        <div class="price-period">
+                            <span class="period-monthly">billed monthly</span>
+                            <span class="period-annual" style="display:none">$4,788/yr — billed annually</span>
+                        </div>
+                    </div>
+
+                    <p class="card-desc">Complete 0&rarr;1 GTM infrastructure. Living system that evolves with your company. Real data. Real leads. Real automation.</p>
+
+                    <button class="card-cta card-cta-spacecraft" onclick="checkout('spacecraft')">Launch Spacecraft</button>
+
+                    <div class="card-features">
+                        <div class="features-label">Everything in Pro, plus</div>
+                        <ul>
+                            <li class="included highlight">Website + competitor auto-scraping</li>
+                            <li class="included highlight">Real lead list generation (Clay/Apollo)</li>
+                            <li class="included highlight">CRM auto-setup (HubSpot / Attio)</li>
+                            <li class="included">Weekly strategy auto-refresh</li>
+                            <li class="included">ICP evolution tracking over time</li>
+                            <li class="included">Competitive signal monitoring</li>
+                            <li class="included">Automation workflow deployment</li>
+                            <li class="included">Multi-product support</li>
+                            <li class="included">Team access (5 seats)</li>
+                            <li class="included">Slack alerts for GTM signals</li>
+                            <li class="included">Priority support</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature Comparison Table -->
+            <div class="comparison-section">
+                <h2>Full feature comparison</h2>
+                <div class="comparison-table-wrap">
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th class="feature-col">Feature</th>
+                                <th>Free</th>
+                                <th class="col-highlight">Pro</th>
+                                <th>Spacecraft</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="section-row"><td colspan="4">Agents</td></tr>
+                            <tr>
+                                <td>Specialist agents</td>
+                                <td>14</td>
+                                <td class="col-highlight">14</td>
+                                <td>14</td>
+                            </tr>
+                            <tr>
+                                <td>Agent chaining</td>
+                                <td><span class="x-mark">&#x2715;</span></td>
+                                <td class="col-highlight"><span class="check-mark">&#x2713;</span></td>
+                                <td><span class="check-mark">&#x2713;</span></td>
+                            </tr>
+                            <tr>
+                                <td>Parallel layer execution</td>
+                                <td><span class="x-mark">&#x2715;</span></td>
+                                <td class="col-highlight"><span class="check-mark">&#x2713;</span></td>
+                                <td><span class="check-mark">&#x2713;</span></td>
+                            </tr>
+                            <tr>
+                                <td>Vertical-specific intelligence</td>
+                                <td><span class="x-mark">&#x2715;</span></td>
+                                <td class="col-highlight"><span class="check-mark">&#x2713;</span> 8 verticals</td>
+                                <td><span class="check-mark">&#x2713;</span> 8 verticals</td>
+                            </tr>
+                            <tr>
+                                <td>Runs per month</td>
+                                <td>3</td>
+                                <td class="col-highlight">Unlimited</td>
+                                <td>Unlimited</td>
+                            </tr>
+
+                            <tr class="section-row"><td colspan="4">Deliverables</td></tr>
+                            <tr>
+                                <td>ICP + positioning + outbound + content</td>
+                                <td><span class="check-mark">&#x2713;</span></td>
+                                <td class="col-highlight"><span class="check-mark">&#x2713;</span></td>
+                                <td><span class="check-mark">&#x2713;</span></td>
+                            </tr>
+                            <tr>
+                                <td>Cross-referenced deliverables</td>
+                                <td><span class="x-mark">&#x2715;</span></td>
+                                <td class="col-highlight"><span class="check-mark">&#x2713;</span></td>
+                                <td><span class="check-mark">&#x2713;</span></td>
+                            </tr>
+                            <tr>
+                                <td>Export (Markdown)</td>
+                                <td><span class="check-mark">&#x2713;</span></td>
+                                <td class="col-highlight"><span class="check-mark">&#x2713;</span></td>
+                                <td><span class="check-mark">&#x2713;</span></td>
+                            </tr>
+                            <tr>
+                                <td>Export (PDF + Notion + Google Docs)</td>
+                                <td><span class="x-mark">&#x2715;</span></td>
+                                <td class="col-highlight"><span class="check-mark">&#x2713;</span></td>
+                                <td><span class="check-mark">&#x2713;</span></td>
+                            </tr>
+
+                            <tr class="section-row"><td colspan="4">Data & Enrichment</td></tr>
+                            <tr>
+                                <td>Website auto-scraping</td>
+                                <td><span class="x-mark">&#x2715;</span></td>
+                                <td class="col-highlight"><span class="x-mark">&#x2715;</span></td>
+                                <td><span class="check-mark">&#x2713;</span></td>
+                            </tr>
+                            <tr>
+                                <td>Competitor auto-scraping</td>
+                                <td><span class="x-mark">&#x2715;</span></td>
+                                <td class="col-highlight"><span class="x-mark">&#x2715;</span></td>
+                                <td><span class="check-mark">&#x2713;</span></td>
+                            </tr>
+                            <tr>
+                                <td>Lead list generation (Clay/Apollo)</td>
+                                <td><span class="x-mark">&#x2715;</span></td>
+                                <td class="col-highlight"><span class="x-mark">&#x2715;</span></td>
+                                <td><span class="check-mark">&#x2713;</span></td>
+                            </tr>
+                            <tr>
+                                <td>Competitive signal monitoring</td>
+                                <td><span class="x-mark">&#x2715;</span></td>
+                                <td class="col-highlight"><span class="x-mark">&#x2715;</span></td>
+                                <td><span class="check-mark">&#x2713;</span></td>
+                            </tr>
+
+                            <tr class="section-row"><td colspan="4">Automation & Integrations</td></tr>
+                            <tr>
+                                <td>CRM auto-setup (HubSpot / Attio)</td>
+                                <td><span class="x-mark">&#x2715;</span></td>
+                                <td class="col-highlight"><span class="x-mark">&#x2715;</span></td>
+                                <td><span class="check-mark">&#x2713;</span></td>
+                            </tr>
+                            <tr>
+                                <td>Automation workflow deployment</td>
+                                <td><span class="x-mark">&#x2715;</span></td>
+                                <td class="col-highlight"><span class="x-mark">&#x2715;</span></td>
+                                <td><span class="check-mark">&#x2713;</span></td>
+                            </tr>
+                            <tr>
+                                <td>Slack alerts for GTM signals</td>
+                                <td><span class="x-mark">&#x2715;</span></td>
+                                <td class="col-highlight"><span class="x-mark">&#x2715;</span></td>
+                                <td><span class="check-mark">&#x2713;</span></td>
+                            </tr>
+                            <tr>
+                                <td>Weekly strategy auto-refresh</td>
+                                <td><span class="x-mark">&#x2715;</span></td>
+                                <td class="col-highlight"><span class="x-mark">&#x2715;</span></td>
+                                <td><span class="check-mark">&#x2713;</span></td>
+                            </tr>
+
+                            <tr class="section-row"><td colspan="4">Team & Support</td></tr>
+                            <tr>
+                                <td>Seats</td>
+                                <td>1</td>
+                                <td class="col-highlight">1</td>
+                                <td>5</td>
+                            </tr>
+                            <tr>
+                                <td>Multi-product support</td>
+                                <td><span class="x-mark">&#x2715;</span></td>
+                                <td class="col-highlight"><span class="x-mark">&#x2715;</span></td>
+                                <td><span class="check-mark">&#x2713;</span></td>
+                            </tr>
+                            <tr>
+                                <td>Priority support</td>
+                                <td><span class="x-mark">&#x2715;</span></td>
+                                <td class="col-highlight">Email</td>
+                                <td>Slack + Email</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- vs. the Alternative -->
+            <div class="alternative-section">
+                <h2>vs. the alternative</h2>
+                <div class="alt-grid">
+                    <div class="alt-card">
+                        <div class="alt-what">GTM Consultant</div>
+                        <div class="alt-cost bad">$15,000 — $50,000</div>
+                        <div class="alt-time">6-12 weeks delivery</div>
+                        <div class="alt-note">One-time. Static. Already stale when you get it.</div>
+                    </div>
+                    <div class="alt-card">
+                        <div class="alt-what">Head of Marketing hire</div>
+                        <div class="alt-cost bad">$150,000+/year</div>
+                        <div class="alt-time">3 months to ramp</div>
+                        <div class="alt-note">Still needs tools, data, and a team.</div>
+                    </div>
+                    <div class="alt-card highlight">
+                        <div class="alt-what">Cold Start AI</div>
+                        <div class="alt-cost good">$0 to start</div>
+                        <div class="alt-time">15 minutes</div>
+                        <div class="alt-note">14 agents. Living system. Evolves with you.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ -->
+            <div class="faq-section">
+                <h2>Frequently asked questions</h2>
+                <div class="faq-grid">
+                    <div class="faq-item">
+                        <button class="faq-q" onclick="toggleFaq(this)">
+                            <span>What exactly do I get on the Free plan?</span>
+                            <span class="faq-arrow">+</span>
+                        </button>
+                        <div class="faq-a">
+                            <p>All 14 specialist agents run independently on your company context. You get a complete GTM execution package: ICP document, positioning bible, outbound sequences, content calendar, sales playbook, pricing architecture, launch plan, CRM guide, and more. Everything is downloadable as Markdown. You get 3 full runs per month.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-q" onclick="toggleFaq(this)">
+                            <span>What does "agent chaining" mean?</span>
+                            <span class="faq-arrow">+</span>
+                        </button>
+                        <div class="faq-a">
+                            <p>On Pro, agents build on each other's outputs. The ICP Architect runs first, then feeds its output into the Positioning Strategist, which feeds into Outbound Engineer, which feeds into Sales Playbook. Each agent knows what every previous agent produced. The result is dramatically more specific and cohesive — your cold email references your exact ICP, your positioning gap, and your competitor's weakness.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-q" onclick="toggleFaq(this)">
+                            <span>What are "verticals" and how does auto-detection work?</span>
+                            <span class="faq-arrow">+</span>
+                        </button>
+                        <div class="faq-a">
+                            <p>We support 8 verticals: B2B SaaS, Developer Tools, Marketplace, E-commerce/DTC, Fintech, AI/ML, Agency, and Consumer App. When you describe your product, we auto-detect your vertical and inject domain-specific GTM intelligence — channel priorities, pricing norms, metric benchmarks, and common mistakes for your space. A fintech GTM looks nothing like a dev tool GTM.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-q" onclick="toggleFaq(this)">
+                            <span>What does Spacecraft include that Pro doesn't?</span>
+                            <span class="faq-arrow">+</span>
+                        </button>
+                        <div class="faq-a">
+                            <p>Spacecraft is the living GTM infrastructure. Beyond chaining and verticals, you get: automated website and competitor scraping (real data, not guesses), lead list generation through Clay/Apollo integrations, CRM auto-setup for HubSpot or Attio, automation workflow deployment, weekly strategy refreshes as your market evolves, competitive signal monitoring, Slack alerts, 5 team seats, and multi-product support.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-q" onclick="toggleFaq(this)">
+                            <span>Can I cancel anytime?</span>
+                            <span class="faq-arrow">+</span>
+                        </button>
+                        <div class="faq-a">
+                            <p>Yes. No contracts, no lock-in. Cancel anytime from your dashboard. If you're on annual billing, you keep access through the end of your billing period. All deliverables you've generated are yours to keep forever.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-q" onclick="toggleFaq(this)">
+                            <span>What happens when I hit 3 runs on Free?</span>
+                            <span class="faq-arrow">+</span>
+                        </button>
+                        <div class="faq-a">
+                            <p>Your run count resets on the 1st of each month. If you need more before then, upgrading to Pro gives you unlimited runs instantly — plus agent chaining and vertical intelligence that make every run 10x more specific.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom CTA -->
+            <div class="bottom-cta">
+                <h2>Build your GTM system <span class="gradient-text">in 15 minutes.</span></h2>
+                <p>14 agents. Complete execution package. No credit card required.</p>
+                <a href="/launch" class="btn-primary btn-large">Start Free</a>
             </div>
         </div>
     </main>
@@ -138,5 +428,7 @@
             <p class="footer-text">The operating system for launching products.</p>
         </div>
     </footer>
+
+    <script src="/static/js/pricing.js"></script>
 </body>
 </html>

@@ -7,11 +7,10 @@ Two modes:
   PRO:  Agents chain — each builds on the outputs before it + vertical intelligence
 """
 import os
-import json
-import asyncio
 import io
+import logging
 from datetime import datetime
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -20,6 +19,18 @@ from anthropic import AsyncAnthropic
 from app.agents.registry import AGENTS, AGENT_ORDER, CATEGORIES
 from app.agents.orchestrator import build_chained_prompt, get_execution_plan, AGENT_DEPENDENCIES
 from app.agents.verticals import get_vertical_context
+from app.validation import (
+    validate_agent_id,
+    validate_company_context,
+    validate_previous_outputs,
+    validate_text_field,
+    validate_company_name,
+    validate_export_results,
+    generate_limiter,
+    export_limiter,
+)
+
+logger = logging.getLogger("coldstart")
 
 app = FastAPI(title="Cold Start AI")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -70,17 +81,30 @@ async def pricing(request: Request):
     return templates.TemplateResponse("pricing.html", {"request": request})
 
 
+@app.get("/api/health")
+async def health():
+    """Health check endpoint for monitoring and deployment probes."""
+    has_api_key = bool(os.environ.get("ANTHROPIC_API_KEY"))
+    return JSONResponse({
+        "status": "ok",
+        "agents": len(AGENTS),
+        "api_key_configured": has_api_key,
+    })
+
+
 @app.post("/api/generate-single")
 async def generate_single(request: Request):
     """
     FREE mode: Run a single agent with base context only.
     """
-    body = await request.json()
-    agent_id = body.get("agent_id", "")
-    company_context = body.get("company_context", "")
+    # Rate limit
+    client_ip = generate_limiter.get_client_ip(request)
+    if not generate_limiter.check(client_ip):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded. Try again in a minute.")
 
-    if agent_id not in AGENTS:
-        return JSONResponse({"status": "error", "message": "Unknown agent"}, status_code=400)
+    body = await request.json()
+    agent_id = validate_agent_id(body.get("agent_id", ""), AGENTS)
+    company_context = validate_company_context(body.get("company_context", ""))
 
     agent = AGENTS[agent_id]
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
@@ -127,16 +151,18 @@ async def generate_chained(request: Request):
     PRO mode: Run a single agent with chained context from previous agents
     + vertical-specific intelligence.
     """
-    body = await request.json()
-    agent_id = body.get("agent_id", "")
-    company_context = body.get("company_context", "")
-    previous_outputs = body.get("previous_outputs", {})
-    product_description = body.get("product_description", "")
-    business_model = body.get("business_model", "")
-    target_market = body.get("target_market", "")
+    # Rate limit
+    client_ip = generate_limiter.get_client_ip(request)
+    if not generate_limiter.check(client_ip):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded. Try again in a minute.")
 
-    if agent_id not in AGENTS:
-        return JSONResponse({"status": "error", "message": "Unknown agent"}, status_code=400)
+    body = await request.json()
+    agent_id = validate_agent_id(body.get("agent_id", ""), AGENTS)
+    company_context = validate_company_context(body.get("company_context", ""))
+    previous_outputs = validate_previous_outputs(body.get("previous_outputs", {}))
+    product_description = validate_text_field(body.get("product_description", ""), "product_description")
+    business_model = validate_text_field(body.get("business_model", ""), "business_model")
+    target_market = validate_text_field(body.get("target_market", ""), "target_market")
 
     agent = AGENTS[agent_id]
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
@@ -198,10 +224,14 @@ async def execution_plan(request: Request):
 
 @app.post("/api/export")
 async def export_results(request: Request):
+    client_ip = export_limiter.get_client_ip(request)
+    if not export_limiter.check(client_ip):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded.")
+
     body = await request.json()
-    company_name = body.get("company_name", "Company")
-    results = body.get("results", {})
-    mode = body.get("mode", "free")
+    company_name = validate_company_name(body.get("company_name", "Company"))
+    results = validate_export_results(body.get("results", {}))
+    mode = body.get("mode", "free") if body.get("mode") in ("free", "pro") else "free"
 
     doc = f"""# Cold Start AI — GTM Execution Package
 ## {company_name}
@@ -238,10 +268,14 @@ async def export_results(request: Request):
 
 @app.post("/api/export-single")
 async def export_single(request: Request):
+    client_ip = export_limiter.get_client_ip(request)
+    if not export_limiter.check(client_ip):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded.")
+
     body = await request.json()
     agent_id = body.get("agent_id", "")
-    content = body.get("content", "")
-    company_name = body.get("company_name", "Company")
+    content = validate_text_field(body.get("content", ""), "content", max_length=100_000)
+    company_name = validate_company_name(body.get("company_name", "Company"))
 
     agent = AGENTS.get(agent_id, {})
     name = agent.get("name", agent_id)
