@@ -9,213 +9,315 @@
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         :root {
-            --black: #0a0a0a;
-            --white: #f5f0e8;
-            --gold: #c9a84c;
-            --gold-dim: #8a6e2e;
-            --border: rgba(201, 168, 76, 0.2);
-            --muted: rgba(245, 240, 232, 0.35);
+            --black: #0a0a0a; --white: #f5f0e8; --gold: #c9a84c;
+            --gold-dim: #8a6e2e; --border: rgba(201,168,76,0.2);
+            --muted: rgba(245,240,232,0.35); --red: #c9604c;
         }
         html, body { height: 100%; background: var(--black); color: var(--white); font-family: 'DM Sans', sans-serif; overflow-x: hidden; }
-        body::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E"); pointer-events: none; z-index: 100; opacity: 0.4; }
-        nav { position: fixed; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; padding: 24px 48px; z-index: 50; border-bottom: 1px solid var(--border); background: rgba(10,10,10,0.85); backdrop-filter: blur(12px); }
-        .logo { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 0.15em; color: var(--white); text-decoration: none; }
-        .logo-dot { color: var(--gold); }
-        .nav-right { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 0.1em; display: flex; align-items: center; gap: 8px; }
-        .pulse { width: 6px; height: 6px; background: var(--gold); border-radius: 50%; animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.8); } }
-        main { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 120px 24px 60px; }
-        .stage-container { width: 100%; max-width: 680px; }
-        .step-track { display: flex; align-items: center; gap: 0; margin-bottom: 64px; }
-        .step-node { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); transition: all 0.4s ease; flex-shrink: 0; }
-        .step-node.active { border-color: var(--gold); color: var(--gold); background: rgba(201, 168, 76, 0.08); }
-        .step-node.done { border-color: var(--gold); background: var(--gold); color: var(--black); font-size: 11px; }
-        .step-line { flex: 1; height: 1px; background: var(--border); transition: background 0.4s ease; }
-        .step-line.done { background: var(--gold-dim); }
-        .question-stage { display: none; }
-        .question-stage.active { display: block; animation: fadeUp 0.45s ease forwards; }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .q-label { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.15em; color: var(--gold); text-transform: uppercase; margin-bottom: 20px; }
-        .q-title { font-family: 'DM Serif Display', serif; font-size: clamp(28px, 5vw, 44px); line-height: 1.12; color: var(--white); margin-bottom: 12px; }
-        .q-sub { font-size: 14px; color: var(--muted); line-height: 1.65; margin-bottom: 40px; }
-        .q-textarea { width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(245, 240, 232, 0.18); color: var(--white); font-family: 'DM Sans', sans-serif; font-size: 17px; line-height: 1.6; padding: 16px 0; resize: none; outline: none; transition: border-color 0.3s ease; min-height: 70px; }
-        .q-textarea:focus { border-bottom-color: var(--gold); }
-        .q-textarea::placeholder { color: rgba(245, 240, 232, 0.2); }
-        .q-input { width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(245, 240, 232, 0.18); color: var(--white); font-family: 'DM Sans', sans-serif; font-size: 17px; padding: 14px 0; outline: none; transition: border-color 0.3s ease; }
-        .q-input:focus { border-bottom-color: var(--gold); }
-        .q-input::placeholder { color: rgba(245, 240, 232, 0.2); }
-        .pill-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
-        .pill { padding: 10px 20px; border: 1px solid var(--border); border-radius: 2px; font-size: 13px; font-family: 'DM Sans', sans-serif; color: var(--muted); cursor: pointer; transition: all 0.2s ease; background: transparent; letter-spacing: 0.02em; }
-        .pill:hover { border-color: rgba(201, 168, 76, 0.5); color: var(--white); }
-        .pill.selected { border-color: var(--gold); color: var(--gold); background: rgba(201, 168, 76, 0.08); }
-        .q-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 48px; }
-        .btn-back { background: transparent; border: none; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 0.1em; cursor: pointer; padding: 0; transition: color 0.2s ease; }
-        .btn-back:hover { color: var(--white); }
-        .btn-next { background: var(--gold); border: none; color: var(--black); font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: 0.12em; padding: 14px 36px; cursor: pointer; transition: all 0.2s ease; }
-        .btn-next:hover { background: #ddb84e; transform: translateX(2px); }
-        .btn-launch { background: var(--gold); border: none; color: var(--black); font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 0.12em; padding: 18px 48px; cursor: pointer; transition: all 0.2s ease; position: relative; overflow: hidden; }
-        .btn-launch:hover { background: #ddb84e; }
-        .optional-divider { display: flex; align-items: center; gap: 16px; margin: 36px 0 28px; }
-        .optional-divider span { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.15em; color: var(--muted); text-transform: uppercase; white-space: nowrap; }
-        .optional-divider::before, .optional-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-        .char-hint { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 10px; text-align: right; letter-spacing: 0.08em; }
-        .summary-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 40px; }
-        .summary-chip { padding: 6px 14px; background: rgba(201, 168, 76, 0.08); border: 1px solid var(--border); font-family: 'DM Mono', monospace; font-size: 11px; color: var(--gold); border-radius: 2px; }
-        .field-error { border-bottom-color: #c9604c !important; }
-        @media (max-width: 640px) { nav { padding: 20px 24px; } .q-title { font-size: 28px; } }
+        body::before { content: ''; position: fixed; inset: 0; opacity: 0.35; pointer-events: none; z-index: 100;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E"); }
+        nav { position: fixed; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; padding: 22px 48px; z-index: 50; border-bottom: 1px solid var(--border); background: rgba(10,10,10,0.88); backdrop-filter: blur(16px); }
+        .logo { font-family: 'Bebas Neue', sans-serif; font-size: 21px; letter-spacing: 0.15em; color: var(--white); text-decoration: none; }
+        .logo span { color: var(--gold); }
+        .nav-r { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 0.1em; display: flex; align-items: center; gap: 8px; }
+        .dot { width: 6px; height: 6px; background: var(--gold); border-radius: 50%; animation: blink 2s infinite; }
+        @keyframes blink { 0%,100%{opacity:1}50%{opacity:.3} }
+        main { min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 110px 24px 80px; }
+        .wrap { width: 100%; max-width: 660px; }
+
+        /* STAGES */
+        .stage { display: none; }
+        .stage.on { display: block; animation: up .4s ease forwards; }
+        @keyframes up { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+
+        /* STEP DOTS */
+        .dots { display: flex; align-items: center; margin-bottom: 56px; }
+        .dn { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 9px; color: var(--muted); flex-shrink: 0; transition: all .35s; }
+        .dn.on { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,.08); }
+        .dn.ok { background: var(--gold); border-color: var(--gold); color: var(--black); font-size: 11px; }
+        .dl { flex: 1; height: 1px; background: var(--border); transition: background .35s; }
+        .dl.ok { background: var(--gold-dim); }
+
+        /* TYPOGRAPHY */
+        .tag { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: .15em; color: var(--gold); text-transform: uppercase; margin-bottom: 18px; }
+        h1.serif { font-family: 'DM Serif Display', serif; font-size: clamp(30px,5vw,46px); line-height: 1.1; margin-bottom: 12px; }
+        .sub { font-size: 14px; color: var(--muted); line-height: 1.65; margin-bottom: 36px; }
+
+        /* INPUTS */
+        .field { width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(245,240,232,.15); color: var(--white); font-family: 'DM Sans', sans-serif; font-size: 17px; padding: 14px 0; outline: none; transition: border-color .25s; }
+        .field:focus { border-bottom-color: var(--gold); }
+        .field::placeholder { color: rgba(245,240,232,.2); }
+        textarea.field { resize: none; line-height: 1.6; min-height: 64px; }
+        .field.err { border-bottom-color: var(--red) !important; }
+        .hint { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 8px; text-align: right; }
+
+        /* URL STAGE */
+        .url-wrap { position: relative; margin-top: 8px; }
+        .url-wrap .field { font-size: 20px; padding-right: 120px; }
+        .url-btn { position: absolute; right: 0; top: 50%; transform: translateY(-50%); background: var(--gold); border: none; color: var(--black); font-family: 'Bebas Neue', sans-serif; font-size: 14px; letter-spacing: .1em; padding: 10px 22px; cursor: pointer; transition: background .2s; }
+        .url-btn:hover { background: #ddb84e; }
+        .url-btn:disabled { opacity: .4; cursor: not-allowed; }
+        .skip-link { display: inline-block; margin-top: 20px; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--border); cursor: pointer; transition: color .2s; letter-spacing: .06em; }
+        .skip-link:hover { color: var(--white); }
+
+        /* SCRAPING STATE */
+        .scraping { display: none; align-items: center; gap: 12px; margin-top: 24px; font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); letter-spacing: .08em; }
+        .scraping.on { display: flex; }
+        .spin { width: 14px; height: 14px; border: 1px solid var(--gold-dim); border-top-color: var(--gold); border-radius: 50%; animation: spin .8s linear infinite; flex-shrink: 0; }
+        @keyframes spin { to{transform:rotate(360deg)} }
+
+        /* PILLS */
+        .pills { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
+        .pill { padding: 9px 18px; border: 1px solid var(--border); border-radius: 2px; font-size: 13px; color: var(--muted); cursor: pointer; transition: all .2s; background: transparent; }
+        .pill:hover { border-color: rgba(201,168,76,.5); color: var(--white); }
+        .pill.on { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,.08); }
+
+        /* DIVIDER */
+        .div { display: flex; align-items: center; gap: 14px; margin: 32px 0 24px; }
+        .div span { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .15em; white-space: nowrap; }
+        .div::before,.div::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+        /* ACTIONS */
+        .acts { display: flex; align-items: center; justify-content: space-between; margin-top: 44px; }
+        .back { background: transparent; border: none; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: .1em; cursor: pointer; transition: color .2s; padding: 0; }
+        .back:hover { color: var(--white); }
+        .nxt { background: var(--gold); border: none; color: var(--black); font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: .12em; padding: 13px 34px; cursor: pointer; transition: all .2s; }
+        .nxt:hover { background: #ddb84e; transform: translateX(2px); }
+
+        /* AGENT PREVIEW */
+        .agent-list { display: flex; flex-direction: column; gap: 1px; margin-bottom: 40px; border: 1px solid var(--border); }
+        .agent-row { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: rgba(255,255,255,.02); transition: background .2s; }
+        .agent-row:hover { background: rgba(201,168,76,.04); }
+        .ag-icon { font-size: 16px; flex-shrink: 0; width: 24px; text-align: center; }
+        .ag-name { font-size: 13px; font-weight: 500; color: var(--white); flex: 1; }
+        .ag-del { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: .06em; }
+
+        /* LAUNCH BTN */
+        .launch { background: var(--gold); border: none; color: var(--black); font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: .12em; padding: 18px 52px; cursor: pointer; transition: all .2s; width: 100%; margin-top: 8px; }
+        .launch:hover { background: #ddb84e; }
+
+        /* SUMMARY CHIPS */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+        .chip { padding: 5px 12px; background: rgba(201,168,76,.08); border: 1px solid var(--border); font-family: 'DM Mono', monospace; font-size: 10px; color: var(--gold); border-radius: 2px; }
+
+        @media(max-width:600px){ nav{padding:18px 20px;} h1.serif{font-size:28px;} .url-wrap .field{font-size:16px;} }
     </style>
 </head>
 <body>
 <nav>
-    <a href="/" class="logo">COLD<span class="logo-dot">·</span>START<span class="logo-dot"> AI</span></a>
-    <div class="nav-right"><div class="pulse"></div>14 AGENTS STANDING BY</div>
+    <a href="/" class="logo">COLD<span>·</span>START<span> AI</span></a>
+    <div class="nav-r"><div class="dot"></div>14 AGENTS STANDING BY</div>
 </nav>
 <main>
-    <div class="stage-container">
-        <div class="step-track">
-            <div class="step-node active" id="node-1">01</div>
-            <div class="step-line" id="line-1"></div>
-            <div class="step-node" id="node-2">02</div>
-            <div class="step-line" id="line-2"></div>
-            <div class="step-node" id="node-3">03</div>
-            <div class="step-line" id="line-3"></div>
-            <div class="step-node" id="node-4">↗</div>
+<div class="wrap">
+
+    <!-- STEP DOTS -->
+    <div class="dots">
+        <div class="dn on" id="d1">01</div><div class="dl" id="l1"></div>
+        <div class="dn" id="d2">02</div><div class="dl" id="l2"></div>
+        <div class="dn" id="d3">03</div><div class="dl" id="l3"></div>
+        <div class="dn" id="d4">↗</div>
+    </div>
+
+    <!-- STAGE 1: URL -->
+    <div class="stage on" id="s1">
+        <div class="tag">Step 01</div>
+        <h1 class="serif">What's your URL?</h1>
+        <p class="sub">Drop your website and we'll read it. We'll pre-fill everything we can — you just confirm.</p>
+        <div class="url-wrap">
+            <input class="field" type="text" id="url-input" placeholder="yourcoolproduct.com" autocomplete="off">
+            <button class="url-btn" id="scrape-btn" onclick="doScrape()">ANALYZE →</button>
+        </div>
+        <div class="scraping" id="scraping-state">
+            <div class="spin"></div>
+            <span id="scrape-msg">Reading your site...</span>
+        </div>
+        <div class="div"><span>no website yet?</span></div>
+        <span class="skip-link" onclick="skipUrl()">Skip — I'll describe it manually</span>
+    </div>
+
+    <!-- STAGE 2: CONFIRM + CLARIFY -->
+    <div class="stage" id="s2">
+        <div class="tag">Step 02</div>
+        <h1 class="serif">Confirm what we found.</h1>
+        <p class="sub">We pre-filled this from your site. Fix anything that's off — the agents will use this as their foundation.</p>
+
+        <input class="field" type="text" id="company_name" placeholder="Product or company name" style="margin-bottom:22px;font-size:15px;">
+        <textarea class="field" id="product_description" placeholder="What does it do, who does it help, what makes it different..." rows="3"></textarea>
+        <div class="hint" id="desc-ct">0 / 500</div>
+
+        <div style="margin-top:32px;">
+            <div class="tag" style="margin-bottom:14px;font-size:10px;">Who buys this?</div>
+            <textarea class="field" id="target_market" placeholder="e.g. First marketing hires at seed-stage AI startups — specific beats vague" rows="2"></textarea>
         </div>
 
-        <!-- Q1 -->
-        <div class="question-stage active" id="stage-1">
-            <div class="q-label">Question 01 of 03</div>
-            <h1 class="q-title">What are you building?</h1>
-            <p class="q-sub">Name it and describe what it does in 2–3 sentences. What's the problem? What's the solution?</p>
-            <input type="text" class="q-input" id="company_name" placeholder="Product or company name" style="margin-bottom: 24px; font-size: 15px;">
-            <textarea class="q-textarea" id="product_description" placeholder="What does it do, who does it help, what makes it different..." rows="3"></textarea>
-            <div class="char-hint" id="desc-count">0 / 500</div>
-            <div class="optional-divider"><span>optional</span></div>
-            <input type="text" class="q-input" id="company_url" placeholder="Website URL" style="font-size: 15px;">
-            <div class="q-actions">
-                <span></span>
-                <button class="btn-next" onclick="goToStage(2)">NEXT →</button>
+        <div style="margin-top:32px;">
+            <div class="tag" style="margin-bottom:14px;font-size:10px;">What stage are you at?</div>
+            <div class="pills" id="stage-pills">
+                <button class="pill" data-v="Idea / Pre-product" onclick="pickStage(this)">Pre-product</button>
+                <button class="pill" data-v="MVP / Pre-launch" onclick="pickStage(this)">MVP / Pre-launch</button>
+                <button class="pill" data-v="Launched, pre-revenue" onclick="pickStage(this)">Launched, no revenue</button>
+                <button class="pill" data-v="Early revenue ($0-$10K MRR)" onclick="pickStage(this)">Early revenue</button>
+                <button class="pill" data-v="Growing ($10K-$100K MRR)" onclick="pickStage(this)">Growing</button>
+                <button class="pill" data-v="Scaling ($100K+ MRR)" onclick="pickStage(this)">Scaling</button>
             </div>
         </div>
 
-        <!-- Q2 -->
-        <div class="question-stage" id="stage-2">
-            <div class="q-label">Question 02 of 03</div>
-            <h1 class="q-title">Who buys it?</h1>
-            <p class="q-sub">Be specific. "VP of Sales at B2B SaaS companies" beats "businesses." The agents use this to build your ICP.</p>
-            <textarea class="q-textarea" id="target_market" placeholder="e.g. First marketing hires at seed-stage AI startups with 5–30 employees..." rows="3"></textarea>
-            <div class="q-actions">
-                <button class="btn-back" onclick="goToStage(1)">← BACK</button>
-                <button class="btn-next" onclick="goToStage(3)">NEXT →</button>
-            </div>
-        </div>
+        <div class="div"><span>optional but useful</span></div>
+        <textarea class="field" id="current_challenges" placeholder="What's not working? What have you tried? Where are you stuck?" rows="2" style="font-size:14px;"></textarea>
 
-        <!-- Q3 -->
-        <div class="question-stage" id="stage-3">
-            <div class="q-label">Question 03 of 03</div>
-            <h1 class="q-title">Where are you right now?</h1>
-            <p class="q-sub">The agents calibrate everything — channel strategy, budget assumptions, motion — to your stage.</p>
-            <div class="pill-grid" id="stage-pills">
-                <button class="pill" data-value="Idea / Pre-product" onclick="selectPill(this)">Pre-product</button>
-                <button class="pill" data-value="MVP / Pre-launch" onclick="selectPill(this)">MVP / Pre-launch</button>
-                <button class="pill" data-value="Launched, pre-revenue" onclick="selectPill(this)">Launched, no revenue</button>
-                <button class="pill" data-value="Early revenue ($0-$10K MRR)" onclick="selectPill(this)">Early revenue</button>
-                <button class="pill" data-value="Growing ($10K-$100K MRR)" onclick="selectPill(this)">Growing</button>
-                <button class="pill" data-value="Scaling ($100K+ MRR)" onclick="selectPill(this)">Scaling</button>
-            </div>
-            <div class="optional-divider"><span>one more optional thing</span></div>
-            <textarea class="q-textarea" id="current_challenges" placeholder="What's not working? What keeps you stuck?" rows="2" style="font-size: 15px;"></textarea>
-            <div class="q-actions">
-                <button class="btn-back" onclick="goToStage(2)">← BACK</button>
-                <button class="btn-next" onclick="goToStage(4)">NEXT →</button>
-            </div>
-        </div>
-
-        <!-- LAUNCH -->
-        <div class="question-stage" id="stage-4">
-            <div class="q-label">Ready</div>
-            <h1 class="q-title">14 agents are<br><em>standing by.</em></h1>
-            <p class="q-sub">They'll build your ICP, positioning, outbound sequences, content engine, sales playbook, launch plan, and more. Takes about 2 minutes.</p>
-            <div class="summary-chips" id="summary-chips"></div>
-            <form id="main-form" action="/dashboard" method="POST">
-                <input type="hidden" name="company_name" id="f-company_name">
-                <input type="hidden" name="product_description" id="f-product_description">
-                <input type="hidden" name="company_url" id="f-company_url">
-                <input type="hidden" name="target_market" id="f-target_market">
-                <input type="hidden" name="stage" id="f-stage">
-                <input type="hidden" name="current_challenges" id="f-current_challenges">
-                <input type="hidden" name="business_model" value="SaaS - Subscription">
-                <input type="hidden" name="budget" value="$1K-$5K/month">
-                <input type="hidden" name="gtm_motion" value="Not sure yet">
-                <input type="hidden" name="mode" value="pro">
-                <div style="display:flex; align-items:center; justify-content:space-between;">
-                    <button type="button" class="btn-back" onclick="goToStage(3)">← BACK</button>
-                    <button type="submit" class="btn-launch">DEPLOY AGENTS ↗</button>
-                </div>
-            </form>
+        <div class="acts">
+            <button class="back" onclick="goTo(1)">← BACK</button>
+            <button class="nxt" onclick="goTo(3)">NEXT →</button>
         </div>
     </div>
+
+    <!-- STAGE 3: AGENT PREVIEW -->
+    <div class="stage" id="s3">
+        <div class="tag">Step 03 — Ready</div>
+        <h1 class="serif">Here's what's<br><em>about to run.</em></h1>
+        <p class="sub">14 specialist agents. Each one builds on the last. Takes about 2 minutes.</p>
+
+        <div class="agent-list" id="agent-list"></div>
+
+        <div class="chips" id="confirm-chips"></div>
+
+        <form id="go-form" action="/dashboard" method="POST">
+            <input type="hidden" name="company_name" id="f-cn">
+            <input type="hidden" name="product_description" id="f-pd">
+            <input type="hidden" name="company_url" id="f-url">
+            <input type="hidden" name="target_market" id="f-tm">
+            <input type="hidden" name="stage" id="f-st">
+            <input type="hidden" name="current_challenges" id="f-cc">
+            <input type="hidden" name="business_model" value="SaaS - Subscription">
+            <input type="hidden" name="budget" value="$1K-$5K/month">
+            <input type="hidden" name="gtm_motion" value="Not sure yet">
+            <input type="hidden" name="mode" value="pro">
+            <div class="acts" style="margin-top:0;">
+                <button type="button" class="back" onclick="goTo(2)">← BACK</button>
+                <button type="submit" class="launch">DEPLOY 14 AGENTS ↗</button>
+            </div>
+        </form>
+    </div>
+
+</div>
 </main>
 <script>
-    let selectedStage = '';
-    const textarea = document.getElementById('product_description');
-    const counter = document.getElementById('desc-count');
-    textarea.addEventListener('input', () => { counter.textContent = textarea.value.length + ' / 500'; });
+const AGENTS = [
+    {icon:"🎯", name:"ICP Architect", del:"ICP & Targeting Doc"},
+    {icon:"⚡", name:"Positioning Strategist", del:"Positioning & Messaging Bible"},
+    {icon:"🔍", name:"Competitor Intel", del:"Competitive Battlecards"},
+    {icon:"📡", name:"Channel Mapper", del:"Channel Strategy & Prioritization"},
+    {icon:"📧", name:"Outbound Engineer", del:"Cold Outreach Sequences"},
+    {icon:"✍️", name:"Content Strategist", del:"Content Engine & Calendar"},
+    {icon:"💰", name:"Pricing Analyst", del:"Pricing Architecture"},
+    {icon:"🎪", name:"Sales Playbook Builder", del:"Sales Scripts & Objection Handling"},
+    {icon:"🏗️", name:"CRM Architect", del:"CRM Pipeline Blueprint"},
+    {icon:"🚀", name:"Launch Planner", del:"90-Day Launch Roadmap"},
+    {icon:"⚙️", name:"Automation Engineer", del:"Automation Workflow Templates"},
+    {icon:"📊", name:"Metrics Designer", del:"GTM Dashboard Blueprint"},
+    {icon:"🤝", name:"Partnership Scout", del:"Partnership Target List"},
+    {icon:"🌍", name:"Community Architect", del:"Community & Flywheel Plan"},
+];
 
-    function goToStage(n) {
-        if (n === 2) {
-            const name = document.getElementById('company_name').value.trim();
-            const desc = document.getElementById('product_description').value.trim();
-            let ok = true;
-            if (!name) { document.getElementById('company_name').classList.add('field-error'); ok = false; } else { document.getElementById('company_name').classList.remove('field-error'); }
-            if (desc.length < 10) { document.getElementById('product_description').classList.add('field-error'); ok = false; } else { document.getElementById('product_description').classList.remove('field-error'); }
-            if (!ok) return;
-        }
-        if (n === 3) {
-            const mkt = document.getElementById('target_market').value.trim();
-            if (mkt.length < 5) { document.getElementById('target_market').classList.add('field-error'); return; }
-            document.getElementById('target_market').classList.remove('field-error');
-        }
-        if (n === 4) {
-            if (!selectedStage) { document.querySelectorAll('.pill').forEach(p => p.style.borderColor = '#c9604c'); return; }
-            buildSummary();
-        }
-        document.querySelectorAll('.question-stage').forEach(s => s.classList.remove('active'));
-        document.getElementById('stage-' + n).classList.add('active');
-        for (let i = 1; i <= 4; i++) {
-            const node = document.getElementById('node-' + i);
-            const line = document.getElementById('line-' + i);
-            if (i < n) { node.classList.remove('active'); node.classList.add('done'); node.textContent = '✓'; if (line) line.classList.add('done'); }
-            else if (i === n) { node.classList.add('active'); node.classList.remove('done'); }
-            else { node.classList.remove('active', 'done'); }
-        }
-        window.scrollTo(0, 0);
-    }
+let scrapedUrl = '';
+let stage = '';
 
-    function selectPill(el) {
-        document.querySelectorAll('.pill').forEach(p => { p.classList.remove('selected'); p.style.borderColor = ''; });
-        el.classList.add('selected');
-        selectedStage = el.dataset.value;
-    }
+// Scrape
+async function doScrape() {
+    const url = document.getElementById('url-input').value.trim();
+    if (!url) { document.getElementById('url-input').classList.add('err'); return; }
+    document.getElementById('url-input').classList.remove('err');
+    document.getElementById('scrape-btn').disabled = true;
+    document.getElementById('scraping-state').classList.add('on');
+    document.getElementById('scrape-msg').textContent = 'Reading your site...';
+    scrapedUrl = url;
 
-    function buildSummary() {
-        const name = document.getElementById('company_name').value.trim();
-        const mkt = document.getElementById('target_market').value.trim();
-        document.getElementById('f-company_name').value = name;
-        document.getElementById('f-product_description').value = document.getElementById('product_description').value.trim();
-        document.getElementById('f-company_url').value = document.getElementById('company_url').value.trim();
-        document.getElementById('f-target_market').value = mkt;
-        document.getElementById('f-stage').value = selectedStage;
-        document.getElementById('f-current_challenges').value = document.getElementById('current_challenges').value.trim();
-        const chips = document.getElementById('summary-chips');
-        chips.innerHTML = '';
-        [name, mkt, selectedStage].filter(Boolean).forEach(item => {
-            const c = document.createElement('div');
-            c.className = 'summary-chip';
-            c.textContent = item.length > 45 ? item.slice(0, 45) + '…' : item;
-            chips.appendChild(c);
+    try {
+        const res = await fetch('/api/scrape', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({url})
         });
+        const d = await res.json();
+        if (d.company_name) document.getElementById('company_name').value = d.company_name;
+        if (d.product_description) document.getElementById('product_description').value = d.product_description;
+        if (d.target_market) document.getElementById('target_market').value = d.target_market;
+        updateDescCount();
+        document.getElementById('scrape-msg').textContent = d.scrape_failed ? 'Could not read site — fill in manually.' : 'Got it. Confirm below.';
+        setTimeout(() => goTo(2), 700);
+    } catch(e) {
+        document.getElementById('scrape-msg').textContent = 'Could not reach site — fill in manually.';
+        setTimeout(() => goTo(2), 800);
     }
+    document.getElementById('scrape-btn').disabled = false;
+}
+
+function skipUrl() { scrapedUrl = ''; goTo(2); }
+
+document.getElementById('url-input').addEventListener('keydown', e => { if (e.key === 'Enter') doScrape(); });
+
+// Stage nav
+function goTo(n) {
+    if (n === 3) {
+        const name = document.getElementById('company_name').value.trim();
+        const desc = document.getElementById('product_description').value.trim();
+        const mkt = document.getElementById('target_market').value.trim();
+        let ok = true;
+        [['company_name', name.length > 0], ['product_description', desc.length >= 8], ['target_market', mkt.length >= 5]].forEach(([id, valid]) => {
+            document.getElementById(id).classList.toggle('err', !valid);
+            if (!valid) ok = false;
+        });
+        if (!stage) { document.querySelectorAll('.pill').forEach(p => p.style.outline = '1px solid var(--red)'); ok = false; }
+        if (!ok) return;
+        buildPreview();
+    }
+    document.querySelectorAll('.stage').forEach(s => s.classList.remove('on'));
+    document.getElementById('s'+n).classList.add('on');
+    for (let i = 1; i <= 4; i++) {
+        const dn = document.getElementById('d'+i), dl = document.getElementById('l'+i);
+        if (i < n) { dn.className='dn ok'; dn.textContent='✓'; if(dl) dl.className='dl ok'; }
+        else if (i === n) { dn.className='dn on'; }
+        else { dn.className='dn'; }
+    }
+    window.scrollTo(0,0);
+}
+
+function pickStage(el) {
+    document.querySelectorAll('.pill').forEach(p => { p.classList.remove('on'); p.style.outline=''; });
+    el.classList.add('on');
+    stage = el.dataset.v;
+}
+
+function updateDescCount() {
+    const t = document.getElementById('product_description');
+    document.getElementById('desc-ct').textContent = t.value.length + ' / 500';
+}
+document.getElementById('product_description').addEventListener('input', updateDescCount);
+
+function buildPreview() {
+    // Agent list
+    const list = document.getElementById('agent-list');
+    list.innerHTML = '';
+    AGENTS.forEach(a => {
+        list.innerHTML += `<div class="agent-row"><div class="ag-icon">${a.icon}</div><div class="ag-name">${a.name}</div><div class="ag-del">${a.del}</div></div>`;
+    });
+    // Chips
+    const cn = document.getElementById('company_name').value.trim();
+    const tm = document.getElementById('target_market').value.trim();
+    const chips = document.getElementById('confirm-chips');
+    chips.innerHTML = '';
+    [cn, tm, stage].filter(Boolean).forEach(v => {
+        chips.innerHTML += `<div class="chip">${v.length>44?v.slice(0,44)+'…':v}</div>`;
+    });
+    // Hidden form fields
+    document.getElementById('f-cn').value = cn;
+    document.getElementById('f-pd').value = document.getElementById('product_description').value.trim();
+    document.getElementById('f-url').value = scrapedUrl;
+    document.getElementById('f-tm').value = tm;
+    document.getElementById('f-st').value = stage;
+    document.getElementById('f-cc').value = document.getElementById('current_challenges').value.trim();
+}
 </script>
 </body>
 </html>

@@ -101,6 +101,84 @@ async def health():
     })
 
 
+@app.post("/api/scrape")
+async def scrape_url(request: Request):
+    """Scrape a URL and extract company context using Claude."""
+    body = await request.json()
+    url = body.get("url", "").strip()
+
+    if not url:
+        return JSONResponse({"error": "No URL provided"}, status_code=400)
+
+    # Normalize URL
+    if not url.startswith("http"):
+        url = "https://" + url
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        # Demo mode — return mock data
+        return JSONResponse({
+            "company_name": "Your Company",
+            "product_description": "Tell us what your product does and who it helps.",
+            "target_market": "",
+            "inferred_vertical": "B2B SaaS",
+            "demo": True,
+        })
+
+    try:
+        import urllib.request
+        import urllib.error
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            raw_html = resp.read().decode("utf-8", errors="ignore")[:12000]
+    except Exception:
+        return JSONResponse({
+            "company_name": "",
+            "product_description": "",
+            "target_market": "",
+            "inferred_vertical": "",
+            "scrape_failed": True,
+        })
+
+    # Strip tags roughly
+    import re
+    text = re.sub(r"<script[^>]*>.*?</script>", "", raw_html, flags=re.DOTALL)
+    text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()[:4000]
+
+    ai = get_client()
+    msg = await ai.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=600,
+        messages=[{
+            "role": "user",
+            "content": f"""Extract structured information from this website text. Return ONLY valid JSON, no markdown.
+
+Website text:
+{text}
+
+Return JSON with these exact keys:
+- company_name: the product or company name (string)
+- product_description: 2-3 sentence description of what the product does (string)
+- target_market: who their customers are, as specific as possible (string)
+- inferred_vertical: one of: B2B SaaS, Dev Tools, Fintech, Marketplace, E-commerce/DTC, AI/ML, Agency, Consumer App (string)
+
+If you cannot determine a field, use empty string."""
+        }]
+    )
+
+    try:
+        import json
+        raw = msg.content[0].text.strip()
+        raw = re.sub(r"^```json\s*", "", raw)
+        raw = re.sub(r"```$", "", raw)
+        data = json.loads(raw)
+        return JSONResponse(data)
+    except Exception:
+        return JSONResponse({"company_name": "", "product_description": "", "target_market": "", "inferred_vertical": ""})
+
+
 @app.post("/api/score-input")
 async def score_input_endpoint(request: Request):
     """Score the quality of user input before running agents."""
