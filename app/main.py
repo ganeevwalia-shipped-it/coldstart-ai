@@ -19,6 +19,15 @@ from anthropic import AsyncAnthropic
 from app.agents.registry import AGENTS, AGENT_ORDER, CATEGORIES
 from app.agents.orchestrator import build_chained_prompt, get_execution_plan, AGENT_DEPENDENCIES
 from app.agents.verticals import get_vertical_context
+from app.agents.rules import (
+    get_applicable_rules,
+    build_rules_block,
+    parse_company_context,
+    score_input_quality,
+)
+from app.agents.knowledge import get_knowledge_context
+from app.agents.schemas import get_format_instructions, validate_output_structure
+from app.agents.clarifier import get_clarifying_questions, get_plan_variants
 from app.validation import (
     validate_agent_id,
     validate_company_context,
@@ -92,6 +101,14 @@ async def health():
     })
 
 
+@app.post("/api/score-input")
+async def score_input_endpoint(request: Request):
+    """Score the quality of user input before running agents."""
+    body = await request.json()
+    result = score_input_quality(body)
+    return JSONResponse(result)
+
+
 @app.post("/api/generate-single")
 async def generate_single(request: Request):
     """
@@ -120,20 +137,38 @@ async def generate_single(request: Request):
         })
 
     try:
-        prompt = f"{agent['prompt']}\n\n---\n\nHere is the company information:\n{company_context}"
+        parsed_ctx = parse_company_context(company_context)
+        rules = get_applicable_rules(agent_id, parsed_ctx)
+        rules_block = build_rules_block(rules)
+        knowledge_block = get_knowledge_context(
+            stage=parsed_ctx.get("stage", ""),
+            motion=parsed_ctx.get("primary gtm motion", ""),
+        )
+
+        format_instructions = get_format_instructions(agent_id)
+        prompt = (
+            f"{agent['prompt']}"
+            f"{rules_block}"
+            f"{format_instructions}"
+            f"{knowledge_block}"
+            f"\n\n---\n\nHere is the company information:\n{company_context}"
+        )
 
         message = await get_client().messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=6000,
             messages=[{"role": "user", "content": prompt}]
         )
+        content = message.content[0].text
+        schema_validation = validate_output_structure(agent_id, content)
         return JSONResponse({
             "status": "complete",
             "agent_id": agent_id,
             "name": agent["name"],
             "icon": agent["icon"],
             "deliverable": agent["deliverable"],
-            "content": message.content[0].text,
+            "content": content,
+            "schema_validation": schema_validation,
         })
     except Exception as e:
         return JSONResponse({
@@ -186,7 +221,19 @@ async def generate_chained(request: Request):
     vertical_context = get_vertical_context(product_description, business_model, target_market)
     enriched_company_context = company_context + vertical_context
 
-    prompt = build_chained_prompt(agent_id, agent["prompt"], enriched_company_context, previous_outputs)
+    parsed_ctx = parse_company_context(company_context)
+    rules = get_applicable_rules(agent_id, parsed_ctx)
+    rules_block = build_rules_block(rules)
+    knowledge_block = get_knowledge_context(
+        stage=parsed_ctx.get("stage", ""),
+        motion=parsed_ctx.get("primary gtm motion", ""),
+    )
+
+    format_instructions = get_format_instructions(agent_id)
+    prompt = build_chained_prompt(
+        agent_id, agent["prompt"] + format_instructions, enriched_company_context,
+        previous_outputs, rules_block=rules_block, knowledge_block=knowledge_block,
+    )
 
     try:
         message = await get_client().messages.create(
@@ -194,13 +241,101 @@ async def generate_chained(request: Request):
             max_tokens=6000,
             messages=[{"role": "user", "content": prompt}]
         )
+        content = message.content[0].text
+        schema_validation = validate_output_structure(agent_id, content)
         return JSONResponse({
             "status": "complete",
             "agent_id": agent_id,
             "name": agent["name"],
             "icon": agent["icon"],
             "deliverable": agent["deliverable"],
-            "content": message.content[0].text,
+            "content": content,
+            "schema_validation": schema_validation,
+        })
+    except Exception as e:
+        return JSONResponse({
+            "status": "error",
+            "agent_id": agent_id,
+            "name": agent["name"],
+            "icon": agent["icon"],
+            "content": f"Error: {str(e)}",
+        })
+
+
+@app.post("/api/clarify")
+async def clarify(request: Request):
+    """Return clarifying questions and plan variants based on input quality."""
+    body = await request.json()
+    score = score_input_quality(body)
+    questions = get_clarifying_questions(body)
+    variants = get_plan_variants(body)
+    return JSONResponse({
+        "score": score,
+        "questions": questions,
+        "variants": variants,
+    })
+
+
+@app.post("/api/refine-agent")
+async def refine_agent(request: Request):
+    """Re-run a single agent with additional user feedback."""
+    client_ip = generate_limiter.get_client_ip(request)
+    if not generate_limiter.check(client_ip):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded. Try again in a minute.")
+
+    body = await request.json()
+    agent_id = validate_agent_id(body.get("agent_id", ""), AGENTS)
+    company_context = validate_company_context(body.get("company_context", ""))
+    previous_output = validate_text_field(body.get("previous_output", ""), "previous_output", max_length=50_000)
+    user_feedback = validate_text_field(body.get("user_feedback", ""), "user_feedback", max_length=5_000)
+
+    if not user_feedback.strip():
+        raise HTTPException(status_code=400, detail="user_feedback is required")
+
+    agent = AGENTS[agent_id]
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+
+    if not api_key:
+        return JSONResponse({
+            "status": "demo",
+            "agent_id": agent_id,
+            "name": agent["name"],
+            "icon": agent["icon"],
+            "content": f"[Demo Mode] Refinement would revise the {agent['name']} output based on your feedback: \"{user_feedback}\"",
+        })
+
+    parsed_ctx = parse_company_context(company_context)
+    rules = get_applicable_rules(agent_id, parsed_ctx)
+    rules_block = build_rules_block(rules)
+    format_instructions = get_format_instructions(agent_id)
+
+    prompt = (
+        f"{agent['prompt']}"
+        f"{rules_block}"
+        f"{format_instructions}"
+        f"\n\n---\n\nHere is the company information:\n{company_context}"
+        f"\n\n---\n\nPREVIOUS OUTPUT (your earlier version):\n{previous_output}"
+        f"\n\n---\n\nUSER FEEDBACK (they want these changes):\n{user_feedback}"
+        f"\n\nRevise your output based on this feedback. Keep what worked, fix what didn't."
+    )
+
+    try:
+        message = await get_client().messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=6000,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        content = message.content[0].text
+        schema_validation = validate_output_structure(agent_id, content)
+        return JSONResponse({
+            "status": "complete",
+            "agent_id": agent_id,
+            "name": agent["name"],
+            "icon": agent["icon"],
+            "deliverable": agent["deliverable"],
+            "content": content,
+            "schema_validation": schema_validation,
+            "refined": True,
         })
     except Exception as e:
         return JSONResponse({

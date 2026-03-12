@@ -78,14 +78,15 @@ EXECUTION_LAYERS = [
 
 
 def build_chained_prompt(agent_id: str, base_prompt: str, company_context: str,
-                          previous_outputs: dict[str, str]) -> str:
+                          previous_outputs: dict[str, str],
+                          rules_block: str = "", knowledge_block: str = "") -> str:
     """
     Build a prompt that includes outputs from dependency agents.
     This is what makes chained mode 10x better than independent mode.
     """
     deps = AGENT_DEPENDENCIES.get(agent_id, [])
     if not deps:
-        return f"{base_prompt}\n\n---\n\nHere is the company information:\n{company_context}"
+        return f"{base_prompt}{rules_block}{knowledge_block}\n\n---\n\nHere is the company information:\n{company_context}"
 
     # Build the context from previous agent outputs
     chain_context = "\n\n" + "=" * 60 + "\n"
@@ -111,7 +112,7 @@ def build_chained_prompt(agent_id: str, base_prompt: str, company_context: str,
     chain_context += "mentioned by other agents. Make your deliverable connect to the overall system.\n"
 
     return (
-        f"{base_prompt}\n\n---\n\n"
+        f"{base_prompt}{rules_block}{knowledge_block}\n\n---\n\n"
         f"Here is the company information:\n{company_context}\n\n"
         f"{chain_context}"
     )

@@ -48,8 +48,21 @@ function showAgent(agentId) {
         document.getElementById('active-agent-tagline').textContent = r.deliverable || '';
         document.getElementById('header-actions').style.display = 'block';
 
+        // Show/hide refine button
+        const refineBtn = document.getElementById('refine-btn');
+        if (refineBtn) {
+            refineBtn.style.display = (r.status === 'complete' || r.status === 'demo') ? 'inline-block' : 'none';
+        }
+        // Hide refine panel when switching agents
+        toggleRefinePanel(false);
+
         if (r.status === 'complete' || r.status === 'demo') {
-            output.innerHTML = `<div class="agent-content">${marked.parse(r.content)}</div>`;
+            let validationBadge = '';
+            if (r.schema_validation && !r.schema_validation.valid) {
+                const pct = Math.round((r.schema_validation.completeness || 0) * 100);
+                validationBadge = `<div class="validation-badge" title="Missing: ${(r.schema_validation.missing || []).join(', ')}">Schema: ${pct}% complete</div>`;
+            }
+            output.innerHTML = `${validationBadge}<div class="agent-content">${marked.parse(r.content)}</div>`;
         } else if (r.status === 'error') {
             output.innerHTML = `<div class="agent-content" style="color: var(--error);">${r.content}</div>`;
         }
@@ -233,6 +246,51 @@ function downloadBlob(blob, filename) {
 
 function slug(s) {
     return s.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+}
+
+// ============ REFINEMENT ============
+function toggleRefinePanel(show) {
+    const panel = document.getElementById('refine-panel');
+    if (panel) {
+        panel.style.display = show ? 'block' : 'none';
+        if (show) {
+            document.getElementById('refine-input').value = '';
+            document.getElementById('refine-input').focus();
+        }
+    }
+}
+
+async function refineAgent() {
+    if (!activeAgent || !results[activeAgent]) return;
+    const feedback = document.getElementById('refine-input').value.trim();
+    if (!feedback) return;
+
+    const btn = document.getElementById('refine-btn-submit');
+    btn.disabled = true;
+    btn.textContent = 'Refining...';
+
+    try {
+        const response = await fetch('/api/refine-agent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                agent_id: activeAgent,
+                company_context: companyContext,
+                previous_output: results[activeAgent].content,
+                user_feedback: feedback,
+            }),
+        });
+
+        const data = await response.json();
+        results[activeAgent] = data;
+        showAgent(activeAgent);
+        toggleRefinePanel(false);
+    } catch (err) {
+        alert('Refinement failed: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Re-run with Feedback';
+    }
 }
 
 // Start based on mode

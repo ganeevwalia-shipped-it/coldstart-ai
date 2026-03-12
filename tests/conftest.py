@@ -11,6 +11,7 @@ os.environ.pop("ANTHROPIC_API_KEY", None)
 
 from app.main import app
 from app.agents.registry import AGENTS, AGENT_ORDER, CATEGORIES
+from app.validation import generate_limiter, export_limiter
 
 
 @pytest.fixture
@@ -60,3 +61,13 @@ def mock_anthropic_response():
 def all_agent_ids():
     """All 14 agent IDs."""
     return list(AGENTS.keys())
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiters():
+    """Reset rate limiters between tests to avoid cross-test 429s."""
+    generate_limiter.requests.clear()
+    export_limiter.requests.clear()
+    yield
+    generate_limiter.requests.clear()
+    export_limiter.requests.clear()

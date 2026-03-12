@@ -65,6 +65,9 @@
                         <p id="active-agent-tagline">Each agent is independently analyzing your product.</p>
                     </div>
                     <div class="header-actions" id="header-actions" style="display:none;">
+                        <button class="btn-refine" id="refine-btn" onclick="toggleRefinePanel(true)" style="display:none;">
+                            Refine ↻
+                        </button>
                         <button class="btn-export" onclick="exportSingle()">
                             Download This ↓
                         </button>
@@ -78,6 +81,17 @@
                         <div class="loader-bar"></div>
                     </div>
                     <p>Agents are working on your GTM system...</p>
+                </div>
+            </div>
+
+            <div class="refine-panel" id="refine-panel" style="display:none;">
+                <div class="refine-header">
+                    <span>Refine this output</span>
+                    <button class="refine-close" onclick="toggleRefinePanel(false)">&times;</button>
+                </div>
+                <textarea id="refine-input" rows="3" placeholder="What would you change? Be specific. e.g., 'Make the ICP more focused on fintech' or 'Remove paid channels, we have no budget'"></textarea>
+                <div class="refine-actions">
+                    <button class="btn-refine-submit" id="refine-btn-submit" onclick="refineAgent()">Re-run with Feedback</button>
                 </div>
             </div>
         </main>

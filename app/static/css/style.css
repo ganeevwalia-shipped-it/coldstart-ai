@@ -1376,3 +1376,193 @@ body {
 @media (max-width: 480px) {
     .agent-grid { grid-template-columns: 1fr; }
 }
+
+/* ============ Refinement Panel ============ */
+.refine-panel {
+    margin: 0 1.5rem 1.5rem;
+    padding: 1rem 1.25rem;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+}
+.refine-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    font-weight: 500;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255,255,255,0.7);
+}
+.refine-close {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.5);
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+.refine-panel textarea {
+    width: 100%;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: #fff;
+    padding: 0.75rem;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.9rem;
+    resize: vertical;
+}
+.refine-panel textarea:focus {
+    outline: none;
+    border-color: rgba(255,255,255,0.3);
+}
+.refine-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.75rem;
+}
+.btn-refine, .btn-refine-submit {
+    padding: 0.5rem 1.25rem;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-refine:hover, .btn-refine-submit:hover {
+    background: rgba(255,255,255,0.15);
+    border-color: rgba(255,255,255,0.3);
+}
+
+/* ============ Validation Badge ============ */
+.validation-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    margin: 0 1.5rem 0.5rem;
+    background: rgba(255,180,0,0.15);
+    border: 1px solid rgba(255,180,0,0.3);
+    border-radius: 4px;
+    color: rgba(255,200,50,0.9);
+    font-size: 0.75rem;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* ============ Clarification Section ============ */
+.clarify-section {
+    max-width: 720px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+}
+.clarify-header h3 {
+    margin: 0 0 0.25rem;
+    font-size: 1.1rem;
+}
+.clarify-header p {
+    color: rgba(255,255,255,0.5);
+    font-size: 0.85rem;
+    margin: 0 0 1.5rem;
+}
+.clarify-question {
+    margin-bottom: 1.25rem;
+}
+.clarify-question label {
+    display: block;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+}
+.required-tag {
+    font-size: 0.7rem;
+    background: rgba(255,80,80,0.2);
+    color: rgba(255,120,120,0.9);
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    vertical-align: middle;
+}
+.clarify-question textarea {
+    width: 100%;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: #fff;
+    padding: 0.75rem;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.9rem;
+    resize: vertical;
+}
+.clarify-question textarea:focus {
+    outline: none;
+    border-color: rgba(255,255,255,0.3);
+}
+.clarify-variants {
+    margin-top: 1.5rem;
+}
+.clarify-variants h4 {
+    font-size: 0.9rem;
+    margin: 0 0 0.75rem;
+}
+.variant-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    background: rgba(0,0,0,0.2);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+.variant-option:hover {
+    border-color: rgba(255,255,255,0.2);
+}
+.variant-option input[type="radio"] {
+    margin-top: 0.25rem;
+}
+.variant-name {
+    font-weight: 500;
+    font-size: 0.9rem;
+    display: block;
+}
+.variant-desc {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.5);
+    display: block;
+    margin-top: 0.25rem;
+}
+.clarify-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+.btn-proceed {
+    padding: 0.75rem 2rem;
+    background: #fff;
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+.btn-skip {
+    padding: 0.75rem 1.5rem;
+    background: transparent;
+    color: rgba(255,255,255,0.5);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+.btn-skip:hover {
+    color: rgba(255,255,255,0.8);
+    border-color: rgba(255,255,255,0.3);
+}
