@@ -3,200 +3,219 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cold Start AI — Launch Your GTM</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <title>Cold Start AI</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --black: #0a0a0a;
+            --white: #f5f0e8;
+            --gold: #c9a84c;
+            --gold-dim: #8a6e2e;
+            --border: rgba(201, 168, 76, 0.2);
+            --muted: rgba(245, 240, 232, 0.35);
+        }
+        html, body { height: 100%; background: var(--black); color: var(--white); font-family: 'DM Sans', sans-serif; overflow-x: hidden; }
+        body::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E"); pointer-events: none; z-index: 100; opacity: 0.4; }
+        nav { position: fixed; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; padding: 24px 48px; z-index: 50; border-bottom: 1px solid var(--border); background: rgba(10,10,10,0.85); backdrop-filter: blur(12px); }
+        .logo { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 0.15em; color: var(--white); text-decoration: none; }
+        .logo-dot { color: var(--gold); }
+        .nav-right { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 0.1em; display: flex; align-items: center; gap: 8px; }
+        .pulse { width: 6px; height: 6px; background: var(--gold); border-radius: 50%; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.8); } }
+        main { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 120px 24px 60px; }
+        .stage-container { width: 100%; max-width: 680px; }
+        .step-track { display: flex; align-items: center; gap: 0; margin-bottom: 64px; }
+        .step-node { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); transition: all 0.4s ease; flex-shrink: 0; }
+        .step-node.active { border-color: var(--gold); color: var(--gold); background: rgba(201, 168, 76, 0.08); }
+        .step-node.done { border-color: var(--gold); background: var(--gold); color: var(--black); font-size: 11px; }
+        .step-line { flex: 1; height: 1px; background: var(--border); transition: background 0.4s ease; }
+        .step-line.done { background: var(--gold-dim); }
+        .question-stage { display: none; }
+        .question-stage.active { display: block; animation: fadeUp 0.45s ease forwards; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .q-label { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.15em; color: var(--gold); text-transform: uppercase; margin-bottom: 20px; }
+        .q-title { font-family: 'DM Serif Display', serif; font-size: clamp(28px, 5vw, 44px); line-height: 1.12; color: var(--white); margin-bottom: 12px; }
+        .q-sub { font-size: 14px; color: var(--muted); line-height: 1.65; margin-bottom: 40px; }
+        .q-textarea { width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(245, 240, 232, 0.18); color: var(--white); font-family: 'DM Sans', sans-serif; font-size: 17px; line-height: 1.6; padding: 16px 0; resize: none; outline: none; transition: border-color 0.3s ease; min-height: 70px; }
+        .q-textarea:focus { border-bottom-color: var(--gold); }
+        .q-textarea::placeholder { color: rgba(245, 240, 232, 0.2); }
+        .q-input { width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(245, 240, 232, 0.18); color: var(--white); font-family: 'DM Sans', sans-serif; font-size: 17px; padding: 14px 0; outline: none; transition: border-color 0.3s ease; }
+        .q-input:focus { border-bottom-color: var(--gold); }
+        .q-input::placeholder { color: rgba(245, 240, 232, 0.2); }
+        .pill-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+        .pill { padding: 10px 20px; border: 1px solid var(--border); border-radius: 2px; font-size: 13px; font-family: 'DM Sans', sans-serif; color: var(--muted); cursor: pointer; transition: all 0.2s ease; background: transparent; letter-spacing: 0.02em; }
+        .pill:hover { border-color: rgba(201, 168, 76, 0.5); color: var(--white); }
+        .pill.selected { border-color: var(--gold); color: var(--gold); background: rgba(201, 168, 76, 0.08); }
+        .q-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 48px; }
+        .btn-back { background: transparent; border: none; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 0.1em; cursor: pointer; padding: 0; transition: color 0.2s ease; }
+        .btn-back:hover { color: var(--white); }
+        .btn-next { background: var(--gold); border: none; color: var(--black); font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: 0.12em; padding: 14px 36px; cursor: pointer; transition: all 0.2s ease; }
+        .btn-next:hover { background: #ddb84e; transform: translateX(2px); }
+        .btn-launch { background: var(--gold); border: none; color: var(--black); font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 0.12em; padding: 18px 48px; cursor: pointer; transition: all 0.2s ease; position: relative; overflow: hidden; }
+        .btn-launch:hover { background: #ddb84e; }
+        .optional-divider { display: flex; align-items: center; gap: 16px; margin: 36px 0 28px; }
+        .optional-divider span { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.15em; color: var(--muted); text-transform: uppercase; white-space: nowrap; }
+        .optional-divider::before, .optional-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+        .char-hint { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 10px; text-align: right; letter-spacing: 0.08em; }
+        .summary-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 40px; }
+        .summary-chip { padding: 6px 14px; background: rgba(201, 168, 76, 0.08); border: 1px solid var(--border); font-family: 'DM Mono', monospace; font-size: 11px; color: var(--gold); border-radius: 2px; }
+        .field-error { border-bottom-color: #c9604c !important; }
+        @media (max-width: 640px) { nav { padding: 20px 24px; } .q-title { font-size: 28px; } }
+    </style>
 </head>
 <body>
-    <div class="noise"></div>
-    <div class="grid-bg"></div>
-
-    <nav class="topbar">
-        <a href="/" class="logo">
-            <span class="logo-icon">◆</span>
-            <span class="logo-text">COLD START</span>
-            <span class="logo-ai">AI</span>
-        </a>
-        <div class="nav-status">
-            <span class="status-dot"></span>
-            <span>14 agents standing by</span>
-        </div>
-    </nav>
-
-    <main class="hero-section">
-        <div class="hero-content">
-            <div class="hero-badge">GTM EXECUTION ENGINE</div>
-            <h1>Build your GTM system.<br><span class="gradient-text">In minutes, not months.</span></h1>
-            <p class="hero-sub">14 specialist agents will analyze your product and produce a complete, downloadable GTM package — ready to execute today.</p>
+<nav>
+    <a href="/" class="logo">COLD<span class="logo-dot">·</span>START<span class="logo-dot"> AI</span></a>
+    <div class="nav-right"><div class="pulse"></div>14 AGENTS STANDING BY</div>
+</nav>
+<main>
+    <div class="stage-container">
+        <div class="step-track">
+            <div class="step-node active" id="node-1">01</div>
+            <div class="step-line" id="line-1"></div>
+            <div class="step-node" id="node-2">02</div>
+            <div class="step-line" id="line-2"></div>
+            <div class="step-node" id="node-3">03</div>
+            <div class="step-line" id="line-3"></div>
+            <div class="step-node" id="node-4">↗</div>
         </div>
 
-        <form id="intake-form" class="intake-form">
-            <div class="form-header">
-                <div class="form-step">01</div>
-                <h2>Tell us about your product</h2>
-                <p>The more context you give, the sharper the deliverables.</p>
+        <!-- Q1 -->
+        <div class="question-stage active" id="stage-1">
+            <div class="q-label">Question 01 of 03</div>
+            <h1 class="q-title">What are you building?</h1>
+            <p class="q-sub">Name it and describe what it does in 2–3 sentences. What's the problem? What's the solution?</p>
+            <input type="text" class="q-input" id="company_name" placeholder="Product or company name" style="margin-bottom: 24px; font-size: 15px;">
+            <textarea class="q-textarea" id="product_description" placeholder="What does it do, who does it help, what makes it different..." rows="3"></textarea>
+            <div class="char-hint" id="desc-count">0 / 500</div>
+            <div class="optional-divider"><span>optional</span></div>
+            <input type="text" class="q-input" id="company_url" placeholder="Website URL" style="font-size: 15px;">
+            <div class="q-actions">
+                <span></span>
+                <button class="btn-next" onclick="goToStage(2)">NEXT →</button>
             </div>
+        </div>
 
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="company_name">Company / Product Name</label>
-                    <input type="text" id="company_name" name="company_name" placeholder="e.g. Stripe, Notion, your startup" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="company_url">Website URL <span class="optional">(optional)</span></label>
-                    <input type="url" id="company_url" name="company_url" placeholder="https://yourproduct.com">
-                </div>
-
-                <div class="form-group full-width">
-                    <label for="product_description">What does your product do?</label>
-                    <textarea id="product_description" name="product_description" rows="3" placeholder="Describe your product in 2-3 sentences. What problem does it solve? How does it work? What makes it different?" required></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="target_market">Target Market</label>
-                    <input type="text" id="target_market" name="target_market" placeholder="e.g. B2B SaaS founders, enterprise HR teams, Gen Z consumers" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="stage">Stage</label>
-                    <select id="stage" name="stage" required>
-                        <option value="">Select stage</option>
-                        <option value="Idea / Pre-product">Idea / Pre-product</option>
-                        <option value="MVP / Pre-launch">MVP / Pre-launch</option>
-                        <option value="Launched, pre-revenue">Launched, pre-revenue</option>
-                        <option value="Early revenue ($0-$10K MRR)">Early revenue ($0-$10K MRR)</option>
-                        <option value="Growing ($10K-$100K MRR)">Growing ($10K-$100K MRR)</option>
-                        <option value="Scaling ($100K+ MRR)">Scaling ($100K+ MRR)</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="business_model">Business Model</label>
-                    <select id="business_model" name="business_model" required>
-                        <option value="">Select model</option>
-                        <option value="SaaS - Subscription">SaaS - Subscription</option>
-                        <option value="SaaS - Usage-based">SaaS - Usage-based</option>
-                        <option value="Marketplace">Marketplace</option>
-                        <option value="E-commerce / DTC">E-commerce / DTC</option>
-                        <option value="Freemium">Freemium</option>
-                        <option value="Enterprise sales">Enterprise sales</option>
-                        <option value="API / Developer tool">API / Developer tool</option>
-                        <option value="Agency / Services">Agency / Services</option>
-                        <option value="Physical product">Physical product</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="budget">Monthly GTM Budget</label>
-                    <select id="budget" name="budget">
-                        <option value="">Select range</option>
-                        <option value="$0 - Bootstrap">$0 - Bootstrap</option>
-                        <option value="$1K-$5K/month">$1K-$5K/month</option>
-                        <option value="$5K-$15K/month">$5K-$15K/month</option>
-                        <option value="$15K-$50K/month">$15K-$50K/month</option>
-                        <option value="$50K+/month">$50K+/month</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="gtm_motion">Primary GTM Motion</label>
-                    <select id="gtm_motion" name="gtm_motion">
-                        <option value="">Select motion</option>
-                        <option value="Product-led growth (PLG)">Product-led growth (PLG)</option>
-                        <option value="Sales-led">Sales-led</option>
-                        <option value="Community-led">Community-led</option>
-                        <option value="Content / SEO-led">Content / SEO-led</option>
-                        <option value="Outbound-led">Outbound-led</option>
-                        <option value="Not sure yet">Not sure yet</option>
-                    </select>
-                </div>
-
-                <div class="form-group full-width">
-                    <label for="current_challenges">Current GTM Challenges <span class="optional">(optional but powerful)</span></label>
-                    <textarea id="current_challenges" name="current_challenges" rows="2" placeholder="What's not working? What have you tried? Where are you stuck? What keeps you up at night?"></textarea>
-                </div>
+        <!-- Q2 -->
+        <div class="question-stage" id="stage-2">
+            <div class="q-label">Question 02 of 03</div>
+            <h1 class="q-title">Who buys it?</h1>
+            <p class="q-sub">Be specific. "VP of Sales at B2B SaaS companies" beats "businesses." The agents use this to build your ICP.</p>
+            <textarea class="q-textarea" id="target_market" placeholder="e.g. First marketing hires at seed-stage AI startups with 5–30 employees..." rows="3"></textarea>
+            <div class="q-actions">
+                <button class="btn-back" onclick="goToStage(1)">← BACK</button>
+                <button class="btn-next" onclick="goToStage(3)">NEXT →</button>
             </div>
+        </div>
 
-            <!-- Mode Selector -->
-            <div class="mode-selector">
-                <div class="mode-header">
-                    <div class="form-step">02</div>
-                    <h2>Choose Your Mode</h2>
-                </div>
-                <div class="mode-options">
-                    <label class="mode-card" for="mode-free">
-                        <input type="radio" id="mode-free" name="mode" value="free" checked>
-                        <div class="mode-card-inner">
-                            <div class="mode-badge free-badge">FREE</div>
-                            <div class="mode-name">Independent Agents</div>
-                            <div class="mode-desc">14 agents run independently. Great output. Fast.</div>
-                            <ul class="mode-features">
-                                <li>All 14 specialist agents</li>
-                                <li>Downloadable deliverables</li>
-                                <li>Basic context matching</li>
-                            </ul>
-                        </div>
-                    </label>
-                    <label class="mode-card" for="mode-pro">
-                        <input type="radio" id="mode-pro" name="mode" value="pro">
-                        <div class="mode-card-inner">
-                            <div class="mode-badge pro-badge">PRO</div>
-                            <div class="mode-name">Chained War Room</div>
-                            <div class="mode-desc">Agents build on each other. ICP feeds outbound feeds sales. 10x more specific.</div>
-                            <ul class="mode-features">
-                                <li>Agent-to-agent intelligence chain</li>
-                                <li>Vertical-specific GTM playbooks</li>
-                                <li>Cross-referenced deliverables</li>
-                                <li>Parallel layer execution</li>
-                            </ul>
-                        </div>
-                    </label>
-                </div>
+        <!-- Q3 -->
+        <div class="question-stage" id="stage-3">
+            <div class="q-label">Question 03 of 03</div>
+            <h1 class="q-title">Where are you right now?</h1>
+            <p class="q-sub">The agents calibrate everything — channel strategy, budget assumptions, motion — to your stage.</p>
+            <div class="pill-grid" id="stage-pills">
+                <button class="pill" data-value="Idea / Pre-product" onclick="selectPill(this)">Pre-product</button>
+                <button class="pill" data-value="MVP / Pre-launch" onclick="selectPill(this)">MVP / Pre-launch</button>
+                <button class="pill" data-value="Launched, pre-revenue" onclick="selectPill(this)">Launched, no revenue</button>
+                <button class="pill" data-value="Early revenue ($0-$10K MRR)" onclick="selectPill(this)">Early revenue</button>
+                <button class="pill" data-value="Growing ($10K-$100K MRR)" onclick="selectPill(this)">Growing</button>
+                <button class="pill" data-value="Scaling ($100K+ MRR)" onclick="selectPill(this)">Scaling</button>
             </div>
-
-            <!-- Agent Selector by Category -->
-            <div class="agent-selector">
-                <div class="selector-header">
-                    <h3>Select Your Agents</h3>
-                    <button type="button" class="select-all-btn" onclick="toggleAllAgents()">Deselect All</button>
-                </div>
-
-                {% for cat_name, cat in categories.items() %}
-                <div class="agent-category-group">
-                    <div class="category-label">
-                        <span class="category-name">{{ cat_name }}</span>
-                        <span class="category-desc">{{ cat.description }}</span>
-                    </div>
-                    <div class="agent-grid">
-                        {% for agent_id in cat.agents %}
-                        {% set agent = agents[agent_id] %}
-                        <label class="agent-card" for="agent-{{ agent_id }}">
-                            <input type="checkbox" id="agent-{{ agent_id }}" name="agents" value="{{ agent_id }}" checked>
-                            <div class="agent-card-inner">
-                                <div class="agent-icon">{{ agent.icon }}</div>
-                                <div class="agent-info">
-                                    <div class="agent-name">{{ agent.name }}</div>
-                                    <div class="agent-tagline">{{ agent.deliverable }}</div>
-                                </div>
-                                <div class="agent-check">✓</div>
-                            </div>
-                        </label>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endfor %}
+            <div class="optional-divider"><span>one more optional thing</span></div>
+            <textarea class="q-textarea" id="current_challenges" placeholder="What's not working? What keeps you stuck?" rows="2" style="font-size: 15px;"></textarea>
+            <div class="q-actions">
+                <button class="btn-back" onclick="goToStage(2)">← BACK</button>
+                <button class="btn-next" onclick="goToStage(4)">NEXT →</button>
             </div>
+        </div>
 
-            <button type="submit" class="submit-btn">
-                <span class="btn-text">Deploy Agents & Build GTM System</span>
-                <span class="btn-icon">→</span>
-            </button>
-        </form>
-    </main>
+        <!-- LAUNCH -->
+        <div class="question-stage" id="stage-4">
+            <div class="q-label">Ready</div>
+            <h1 class="q-title">14 agents are<br><em>standing by.</em></h1>
+            <p class="q-sub">They'll build your ICP, positioning, outbound sequences, content engine, sales playbook, launch plan, and more. Takes about 2 minutes.</p>
+            <div class="summary-chips" id="summary-chips"></div>
+            <form id="main-form" action="/dashboard" method="POST">
+                <input type="hidden" name="company_name" id="f-company_name">
+                <input type="hidden" name="product_description" id="f-product_description">
+                <input type="hidden" name="company_url" id="f-company_url">
+                <input type="hidden" name="target_market" id="f-target_market">
+                <input type="hidden" name="stage" id="f-stage">
+                <input type="hidden" name="current_challenges" id="f-current_challenges">
+                <input type="hidden" name="business_model" value="SaaS - Subscription">
+                <input type="hidden" name="budget" value="$1K-$5K/month">
+                <input type="hidden" name="gtm_motion" value="Not sure yet">
+                <input type="hidden" name="mode" value="pro">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                    <button type="button" class="btn-back" onclick="goToStage(3)">← BACK</button>
+                    <button type="submit" class="btn-launch">DEPLOY AGENTS ↗</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</main>
+<script>
+    let selectedStage = '';
+    const textarea = document.getElementById('product_description');
+    const counter = document.getElementById('desc-count');
+    textarea.addEventListener('input', () => { counter.textContent = textarea.value.length + ' / 500'; });
 
-    <script src="/static/js/app.js"></script>
+    function goToStage(n) {
+        if (n === 2) {
+            const name = document.getElementById('company_name').value.trim();
+            const desc = document.getElementById('product_description').value.trim();
+            let ok = true;
+            if (!name) { document.getElementById('company_name').classList.add('field-error'); ok = false; } else { document.getElementById('company_name').classList.remove('field-error'); }
+            if (desc.length < 10) { document.getElementById('product_description').classList.add('field-error'); ok = false; } else { document.getElementById('product_description').classList.remove('field-error'); }
+            if (!ok) return;
+        }
+        if (n === 3) {
+            const mkt = document.getElementById('target_market').value.trim();
+            if (mkt.length < 5) { document.getElementById('target_market').classList.add('field-error'); return; }
+            document.getElementById('target_market').classList.remove('field-error');
+        }
+        if (n === 4) {
+            if (!selectedStage) { document.querySelectorAll('.pill').forEach(p => p.style.borderColor = '#c9604c'); return; }
+            buildSummary();
+        }
+        document.querySelectorAll('.question-stage').forEach(s => s.classList.remove('active'));
+        document.getElementById('stage-' + n).classList.add('active');
+        for (let i = 1; i <= 4; i++) {
+            const node = document.getElementById('node-' + i);
+            const line = document.getElementById('line-' + i);
+            if (i < n) { node.classList.remove('active'); node.classList.add('done'); node.textContent = '✓'; if (line) line.classList.add('done'); }
+            else if (i === n) { node.classList.add('active'); node.classList.remove('done'); }
+            else { node.classList.remove('active', 'done'); }
+        }
+        window.scrollTo(0, 0);
+    }
+
+    function selectPill(el) {
+        document.querySelectorAll('.pill').forEach(p => { p.classList.remove('selected'); p.style.borderColor = ''; });
+        el.classList.add('selected');
+        selectedStage = el.dataset.value;
+    }
+
+    function buildSummary() {
+        const name = document.getElementById('company_name').value.trim();
+        const mkt = document.getElementById('target_market').value.trim();
+        document.getElementById('f-company_name').value = name;
+        document.getElementById('f-product_description').value = document.getElementById('product_description').value.trim();
+        document.getElementById('f-company_url').value = document.getElementById('company_url').value.trim();
+        document.getElementById('f-target_market').value = mkt;
+        document.getElementById('f-stage').value = selectedStage;
+        document.getElementById('f-current_challenges').value = document.getElementById('current_challenges').value.trim();
+        const chips = document.getElementById('summary-chips');
+        chips.innerHTML = '';
+        [name, mkt, selectedStage].filter(Boolean).forEach(item => {
+            const c = document.createElement('div');
+            c.className = 'summary-chip';
+            c.textContent = item.length > 45 ? item.slice(0, 45) + '…' : item;
+            chips.appendChild(c);
+        });
+    }
+</script>
 </body>
 </html>
