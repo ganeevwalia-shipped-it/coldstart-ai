@@ -12,6 +12,7 @@ function toggleAllAgents() {
 
 function getFormData() {
     const modeRadio = document.querySelector('input[name="mode"]:checked');
+    const enrichment = (typeof scrapeEnrichment !== 'undefined') ? scrapeEnrichment : {};
     return {
         company_name: document.getElementById('company_name').value,
         company_url: document.getElementById('company_url')?.value || '',
@@ -24,6 +25,16 @@ function getFormData() {
         current_challenges: document.getElementById('current_challenges').value,
         agents: Array.from(document.querySelectorAll('.agent-card input:checked')).map(cb => cb.value),
         mode: modeRadio ? modeRadio.value : 'free',
+        // Enrichment from scrape
+        competitive_positioning: enrichment.competitive_positioning || '',
+        pricing_signals: enrichment.pricing_signals || '',
+        company_stage_signals: enrichment.company_stage_signals || '',
+        tech_stack_signals: enrichment.tech_stack_signals || '',
+        team_size_signals: enrichment.team_size_signals || '',
+        key_integrations: enrichment.key_integrations || '',
+        funding_signals: enrichment.funding_signals || '',
+        hiring_signals: enrichment.hiring_signals || '',
+        inferred_vertical: enrichment.inferred_vertical || '',
     };
 }
 

@@ -3,3 +3,5 @@ __pycache__/
 .env
 .github/
 validation_log.jsonl
+quality_log.jsonl
+tracking_log.jsonl

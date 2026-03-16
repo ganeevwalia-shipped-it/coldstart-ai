@@ -6,8 +6,9 @@
     <title>Cold Start AI — GTM War Room</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js"></script>
 </head>
 <body class="dashboard-body">
     <div class="noise"></div>
@@ -23,9 +24,17 @@
                 <span class="status-dot running"></span>
                 <span id="status-text">Building GTM system...</span>
             </div>
-            <button class="export-all-btn" id="export-all-btn" onclick="exportAll()" style="display:none;">
-                Download Full Package ↓
-            </button>
+            <div class="export-dropdown" id="export-all-dropdown" style="display:none;">
+                <button class="export-all-btn" onclick="toggleExportMenu('all')">
+                    Export Full Package ▾
+                </button>
+                <div class="export-menu" id="export-menu-all" style="display:none;">
+                    <button onclick="exportAll()">Markdown (.md)</button>
+                    <button onclick="exportCSVAll()">CSV (all agents)</button>
+                    <button onclick="exportPlatformAll('hubspot')">HubSpot CSV</button>
+                    <button onclick="exportPlatformAll('apollo')">Apollo CSV</button>
+                </div>
+            </div>
         </div>
     </nav>
 
@@ -68,9 +77,20 @@
                         <button class="btn-refine" id="refine-btn" onclick="toggleRefinePanel(true)" style="display:none;">
                             Refine ↻
                         </button>
-                        <button class="btn-export" onclick="exportSingle()">
-                            Download This ↓
-                        </button>
+                        <div class="export-dropdown">
+                            <button class="btn-export" onclick="toggleExportMenu('single')">
+                                Export ▾
+                            </button>
+                            <div class="export-menu" id="export-menu-single" style="display:none;">
+                                <button onclick="exportSingle()">Markdown (.md)</button>
+                                <button onclick="exportCSVSingle()">CSV</button>
+                                <button onclick="exportPlatformSingle('hubspot')">HubSpot CSV</button>
+                                <button onclick="exportPlatformSingle('apollo')">Apollo CSV</button>
+                                <hr>
+                                <button onclick="showHubSpotModal()">Push to HubSpot</button>
+                                <button onclick="showMetaAdsModal()">Push to Meta Ads</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -96,6 +116,94 @@
             </div>
         </main>
     </div>
+
+    <!-- HubSpot Credentials Modal -->
+    <div class="modal-overlay" id="hubspot-modal" style="display:none;" onclick="if(event.target===this)closeHubSpotModal()">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Connect to HubSpot</h3>
+                <button class="modal-close" onclick="closeHubSpotModal()">&times;</button>
+            </div>
+            <p style="margin:0 0 16px;color:#999;font-size:14px;">
+                Enter your HubSpot Private App token to push data directly.
+            </p>
+            <input type="password" id="hubspot-api-key" placeholder="pat-na1-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                   style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;background:#fafaf8;color:#1a1a1a;font-family:'JetBrains Mono',monospace;font-size:13px;margin-bottom:12px;">
+            <div id="hubspot-status" style="margin-bottom:12px;font-size:13px;"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <button class="btn-refine" onclick="testHubSpotConnection()" id="hubspot-test-btn">Test Connection</button>
+                <button class="btn-export" onclick="pushToHubSpot()" id="hubspot-push-btn" disabled>Push Data</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Meta Ads Credentials Modal -->
+    <div class="modal-overlay" id="meta-ads-modal" style="display:none;" onclick="if(event.target===this)closeMetaAdsModal()">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Connect to Meta Ads</h3>
+                <button class="modal-close" onclick="closeMetaAdsModal()">&times;</button>
+            </div>
+            <p style="margin:0 0 16px;color:#999;font-size:14px;">
+                Enter your Meta System User Token and Ad Account ID to push audiences directly.
+            </p>
+            <input type="password" id="meta-access-token" placeholder="System User Token"
+                   style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;background:#fafaf8;color:#1a1a1a;font-family:'JetBrains Mono',monospace;font-size:13px;margin-bottom:8px;">
+            <input type="text" id="meta-ad-account-id" placeholder="Ad Account ID (e.g. act_123456789)"
+                   style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;background:#fafaf8;color:#1a1a1a;font-family:'JetBrains Mono',monospace;font-size:13px;margin-bottom:12px;">
+            <div id="meta-ads-status" style="margin-bottom:12px;font-size:13px;"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <button class="btn-refine" onclick="testMetaAdsConnection()" id="meta-ads-test-btn">Test Connection</button>
+                <button class="btn-export" onclick="pushToMetaAds()" id="meta-ads-push-btn" disabled>Push Audiences</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast notification -->
+    <div id="export-toast" class="export-toast" style="display:none;"></div>
+
+    <style>
+        .export-dropdown { position: relative; display: inline-block; }
+        .export-menu {
+            position: absolute; top: 100%; right: 0; z-index: 100;
+            background: white; border: 1px solid var(--border); border-radius: 12px;
+            min-width: 190px; padding: 6px 0; margin-top: 6px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+        }
+        .export-menu button {
+            display: block; width: 100%; text-align: left;
+            padding: 9px 18px; border: none; background: none;
+            color: var(--text); font-size: 13px; cursor: pointer;
+            font-family: 'Inter', sans-serif;
+        }
+        .export-menu button:hover { background: #f5f3ef; }
+        .export-menu hr { border: none; border-top: 1px solid var(--border); margin: 4px 0; }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.25); z-index: 200;
+            display: flex; align-items: center; justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background: white; border: 1px solid var(--border); border-radius: 20px;
+            padding: 28px; max-width: 480px; width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1), 0 8px 20px rgba(0,0,0,0.05);
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .modal-header h3 { font-family: 'EB Garamond', serif; font-weight: 500; font-size: 22px; margin: 0; }
+        .modal-close { background: none; border: none; color: #999; font-size: 24px; cursor: pointer; }
+        .export-toast {
+            position: fixed; bottom: 24px; right: 24px; z-index: 300;
+            padding: 14px 22px; border-radius: 12px; font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            animation: toast-in 0.3s ease;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        }
+        .export-toast.success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+        .export-toast.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+        .export-toast.info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+        @keyframes toast-in { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    </style>
 
     <script src="/static/js/dashboard.js"></script>
 </body>

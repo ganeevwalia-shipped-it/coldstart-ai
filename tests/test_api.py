@@ -436,3 +436,201 @@ class TestInputEdgeCases:
         # In demo mode, should still return structured demo content
         assert data["status"] == "demo"
         assert "HACKED" not in data["status"]
+
+
+# ========================================
+# TRACKING ENDPOINT
+# ========================================
+
+class TestTrackingEndpoint:
+    """POST /api/track — Feedback loop tracking."""
+
+    @pytest.mark.anyio
+    async def test_valid_export_event(self, client):
+        r = await client.post("/api/track", json={
+            "event": "export",
+            "agent_id": "icp_architect",
+            "mode": "free",
+            "quality_score": 75,
+        })
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    @pytest.mark.anyio
+    async def test_valid_refine_event(self, client):
+        r = await client.post("/api/track", json={
+            "event": "refine",
+            "agent_id": "positioning_strategist",
+        })
+        assert r.status_code == 200
+
+    @pytest.mark.anyio
+    async def test_valid_view_event(self, client):
+        r = await client.post("/api/track", json={
+            "event": "view",
+            "agent_id": "channel_mapper",
+        })
+        assert r.status_code == 200
+
+    @pytest.mark.anyio
+    async def test_valid_skip_event(self, client):
+        r = await client.post("/api/track", json={
+            "event": "skip",
+            "agent_id": "sales_playbook",
+        })
+        assert r.status_code == 200
+
+    @pytest.mark.anyio
+    async def test_invalid_event_returns_400(self, client):
+        r = await client.post("/api/track", json={
+            "event": "invalid_event",
+            "agent_id": "icp_architect",
+        })
+        assert r.status_code == 400
+
+    @pytest.mark.anyio
+    async def test_empty_event_returns_400(self, client):
+        r = await client.post("/api/track", json={
+            "event": "",
+            "agent_id": "icp_architect",
+        })
+        assert r.status_code == 400
+
+
+# ========================================
+# META ADS ENDPOINT
+# ========================================
+
+class TestMetaAdsEndpoint:
+    """POST /api/export-to/meta-ads"""
+
+    @pytest.mark.anyio
+    async def test_missing_access_token_returns_400(self, client):
+        r = await client.post("/api/export-to/meta-ads", json={
+            "agent_id": "icp_architect",
+            "content": "test",
+            "credentials": {},
+        })
+        assert r.status_code == 400
+        assert "access_token" in r.json()["detail"]
+
+    @pytest.mark.anyio
+    async def test_missing_ad_account_id_returns_400(self, client):
+        r = await client.post("/api/export-to/meta-ads", json={
+            "agent_id": "icp_architect",
+            "content": "test",
+            "credentials": {"access_token": "test-token"},
+        })
+        assert r.status_code == 400
+        assert "ad_account_id" in r.json()["detail"]
+
+
+# ========================================
+# SCRAPE ENDPOINT ERROR HANDLING
+# ========================================
+
+class TestScrapeEndpoint:
+    """POST /api/scrape — Error handling and SSRF protection."""
+
+    @pytest.mark.anyio
+    async def test_empty_url_returns_400(self, client):
+        r = await client.post("/api/scrape", json={"url": ""})
+        assert r.status_code == 400
+        assert "No URL" in r.json()["error"]
+
+    @pytest.mark.anyio
+    async def test_private_ip_blocked(self, client):
+        """SSRF: requests to private IPs should be rejected."""
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+            r = await client.post("/api/scrape", json={"url": "http://192.168.1.1"})
+        assert r.status_code == 400
+        assert "not allowed" in r.json()["error"]
+
+    @pytest.mark.anyio
+    async def test_localhost_blocked(self, client):
+        """SSRF: localhost should be rejected."""
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+            r = await client.post("/api/scrape", json={"url": "http://localhost"})
+        assert r.status_code == 400
+        assert "not allowed" in r.json()["error"]
+
+    @pytest.mark.anyio
+    async def test_unreachable_url_returns_502(self, client):
+        """When site pages can't be fetched, return 502."""
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+            with patch("app.main._is_safe_url", return_value=True):
+                with patch("app.main._fetch_site_pages", return_value={}):
+                    r = await client.post("/api/scrape", json={
+                        "url": "https://nonexistent.example.com"
+                    })
+        assert r.status_code == 502
+        assert "Could not fetch" in r.json()["error"]
+
+    @pytest.mark.anyio
+    async def test_demo_mode_without_api_key(self, client):
+        """Without API key, should return demo data."""
+        with patch.dict(os.environ, {}, clear=False):
+            # Ensure no API key
+            os.environ.pop("ANTHROPIC_API_KEY", None)
+            r = await client.post("/api/scrape", json={
+                "url": "https://example.com"
+            })
+        assert r.status_code == 200
+        data = r.json()
+        assert data.get("demo") is True
+
+
+# ========================================
+# META ADS CONNECTOR UNIT TESTS
+# ========================================
+
+class TestMetaAdsConnectorParsing:
+    """Unit tests for MetaAdsConnector parsing methods."""
+
+    def test_parse_audience_segments_numbered(self):
+        from app.connectors.meta_ads import MetaAdsConnector
+        connector = MetaAdsConnector()
+        text = """
+1. Enterprise CTOs aged 35-55 years
+   Interests: cloud computing, enterprise software
+   Job titles: CTO, VP Engineering, Director of IT
+
+2. Startup Founders aged 25-40 years
+   Interests: startups, venture capital
+   Job titles: CEO, Founder, Co-founder
+"""
+        audiences = connector._parse_audience_segments(text)
+        assert len(audiences) == 2
+        assert audiences[0]["targeting"]["age_min"] == 35
+        assert audiences[0]["targeting"]["age_max"] == 55
+        assert "flexible_spec" in audiences[0]["targeting"]
+
+    def test_parse_audience_segments_fallback(self):
+        from app.connectors.meta_ads import MetaAdsConnector
+        connector = MetaAdsConnector()
+        # Short text with no parseable segments → fallback generic audience
+        audiences = connector._parse_audience_segments("short")
+        assert len(audiences) == 1
+        assert audiences[0]["name"] == "ICP Target Audience"
+
+    def test_extract_meta_section_finds_facebook(self):
+        from app.connectors.meta_ads import MetaAdsConnector
+        connector = MetaAdsConnector()
+        content = """### Ad Platform Audience Definitions
+
+Facebook Ads:
+- Target CTOs at enterprise companies
+- Interest: cloud infrastructure
+
+Google Ads:
+- Search keywords for cloud platforms
+"""
+        result = connector._extract_meta_section(content)
+        assert "CTOs" in result
+        assert "Google" not in result
+
+    def test_extract_meta_section_no_match(self):
+        from app.connectors.meta_ads import MetaAdsConnector
+        connector = MetaAdsConnector()
+        result = connector._extract_meta_section("No platform sections here")
+        assert result == ""

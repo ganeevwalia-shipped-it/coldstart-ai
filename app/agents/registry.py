@@ -48,7 +48,29 @@ Provide 5 ready-to-paste search queries for:
 - LinkedIn Sales Navigator
 - Google (site:linkedin.com searches)
 - Twitter/X advanced search
-These should be copy-paste ready.
+Use exact boolean operator syntax. Example format: title:"VP Engineering" AND company size:"51-200" AND industry:"Computer Software". These must be copy-paste ready into each platform.
+
+### 7. Ad Platform Audience Definitions
+Provide ready-to-paste audience targeting for each platform:
+
+**Google Ads Custom Audience:**
+- Keywords: [10 in-market keywords]
+- URLs: [5 competitor/industry URLs for custom intent]
+- Apps: [relevant apps if applicable]
+
+**Facebook/Meta Ads:**
+- Job titles: [exact titles]
+- Industries: [exact industries]
+- Interests: [specific interests]
+- Behaviors: [relevant behaviors]
+- Lookalike source: [what seed audience to use]
+
+**LinkedIn Ads:**
+- Job titles: [exact titles from ICP]
+- Job functions: [functions]
+- Company sizes: [ranges]
+- Industries: [industries]
+- Seniority levels: [levels]
 
 Be specific. Use real job titles, real company examples, real pain points. No fluff. This document should be immediately usable."""
     },
@@ -96,6 +118,9 @@ Write actual copy for each context:
 | Cold email opener | [first 2 sentences] |
 | Conference intro | [what you say when someone asks "what do you do?"] |
 | Product Hunt tagline | [short + punchy] |
+| Pricing page headline | [headline for pricing page] |
+| Onboarding welcome email | Subject: [subject] — Body: [full welcome email text, 3-4 sentences] |
+| 404 page microcopy | [fun, on-brand 404 message] |
 
 ### 4. Competitive Differentiation
 - **What you do that NO ONE else does** (not better — DIFFERENT)
@@ -106,6 +131,33 @@ Write actual copy for each context:
 - 5 adjectives that define the voice
 - 3 things the brand NEVER says
 - Example sentences in-voice vs off-voice
+
+### 6. Website Section Copy
+Ready-to-paste copy for key website sections:
+
+**Hero Section:**
+- Headline: [8 words max]
+- Subheadline: [1 sentence]
+- CTA button: [text]
+- Supporting text: [2 sentences below the fold]
+
+**About Page (3 paragraphs):**
+```
+[Paragraph 1: The problem — why this company exists]
+[Paragraph 2: The approach — what makes it different]
+[Paragraph 3: The team/mission — why they'll win]
+```
+
+**Features Section:**
+For each value pillar, write:
+- Section headline
+- 2-sentence description
+- Bullet list of 3-4 specific capabilities
+
+**CTA Variations:**
+1. [Primary CTA — for hero section]
+2. [Secondary CTA — for mid-page]
+3. [Soft CTA — for footer/exit intent]
 
 Be bold. Safe positioning is invisible positioning. Every word should be usable TODAY."""
     },
@@ -168,6 +220,34 @@ What NO competitor does well — these are positioning opportunities:
 - Moat to build in 12 months: [specific action]
 - Long-term moat: [what makes you unkillable]
 
+### 7. Printable Battle Cards (One Per Competitor)
+For each direct competitor, create a SELF-CONTAINED one-page battle card:
+
+**[Competitor Name] Battle Card**
+| | Us | Them |
+|---|---|---|
+| Best for | [persona] | [persona] |
+| Pricing | [price] | [price] |
+| Key strength | [strength] | [strength] |
+| Key weakness | [weakness] | [weakness] |
+| Integration/platform | [details] | [details] |
+
+**If they say X, you say Y:**
+1. "[Common claim]" → "[Your response]"
+2. "[Common claim]" → "[Your response]"
+3. "[Common claim]" → "[Your response]"
+
+**Killer question to ask the prospect:**
+"[One question that exposes this competitor's weakness]"
+
+Each card must be printable on a single page — concise and scannable.
+
+### 8. Win/Loss Quick Reference
+For each direct competitor, a 3-bullet quick summary:
+- **[Competitor 1]**: We win when [X]. We lose when [Y]. Key move: [Z].
+- **[Competitor 2]**: We win when [X]. We lose when [Y]. Key move: [Z].
+- **[Competitor 3]**: We win when [X]. We lose when [Y]. Key move: [Z].
+
 Be brutally honest. Sugar-coating competitive analysis gets people killed."""
     },
 
@@ -211,7 +291,7 @@ For each of the top 5 channels:
 ### 3. 90-Day Channel Roadmap
 | Week | Action | Channel | Budget | Expected Result |
 |------|--------|---------|--------|----------------|
-[Fill in week by week for 12 weeks]
+[Fill in week by week for 12 weeks. Each action must be SPECIFIC — not "run LinkedIn ads" but "create 3 LinkedIn single-image ads targeting [ICP title] with [message angle from positioning], $X/day budget, A/B test headline vs benefit-led copy"]
 
 ### 4. Budget Scenarios
 | Channel | $5K/mo | $15K/mo | $50K/mo |
@@ -228,6 +308,17 @@ One unconventional channel nobody's thinking about:
 - Why it could work for THIS specific product
 - How to test it in 7 days
 - Expected results
+
+### 7. Week 1 Sprint Plan
+The exact actions for your first week — Monday through Friday:
+
+| Day | Morning | Afternoon | Tools to Set Up |
+|-----|---------|-----------|-----------------|
+| Mon | [Exact action with details] | [Exact action] | [Tools/accounts to create] |
+| Tue | [Exact action with details] | [Exact action] | [Tools/accounts] |
+| Wed | [Exact action with details] | [Exact action] | [Campaigns to launch] |
+| Thu | [Exact action with details] | [Exact action] | [Content to publish] |
+| Fri | [Exact action with details] | [Review + adjust] | [Metrics to check] |
 
 Every recommendation must be specific to their product, ICP, and stage. No generic advice."""
     },
@@ -751,6 +842,50 @@ Actions for next week:
 3.
 ```
 
+### 8. Google Sheets Formulas
+Ready-to-paste formulas for a metrics spreadsheet. Include column header definitions.
+
+| Metric | Formula | Column Setup |
+|--------|---------|-------------|
+| MRR | =SUMPRODUCT((status="active")*(mrr_column)) | A: Customer, B: Status, C: MRR |
+| CAC | =total_spend/new_customers_count | D: Channel, E: Spend, F: New Customers |
+| LTV | =avg_revenue_per_user * avg_lifetime_months | G: ARPU, H: Avg Lifetime |
+| Churn Rate | =churned_this_month/total_start_of_month | I: Churned, J: Total Start |
+| Payback Period | =CAC/monthly_gross_margin_per_customer | K: Gross Margin/Customer |
+[Include 8-10 formulas total, specific to their business model]
+
+### 9. SQL Dashboard Queries
+5 PostgreSQL queries for key dashboards. Include table schema assumptions.
+
+```sql
+-- Schema assumption: users(id, created_at, plan, mrr, status), events(user_id, event, created_at), payments(user_id, amount, created_at)
+
+-- 1. MRR Calculation (current month)
+SELECT SUM(mrr) as current_mrr, COUNT(*) as active_customers
+FROM users WHERE status = 'active';
+
+-- 2. Cohort Retention (monthly)
+[Write full query]
+
+-- 3. Funnel Conversion Rates
+[Write full query]
+
+-- 4. Lead Source Attribution
+[Write full query]
+
+-- 5. Pipeline Velocity
+[Write full query]
+```
+
+### 10. Tracking Event Spec
+Analytics events to instrument (Segment/Mixpanel compatible):
+
+| Event Name | Trigger | Properties | Priority |
+|------------|---------|-----------|----------|
+| user_signed_up | Account creation | plan, source, referrer | P0 |
+| feature_activated | First use of core feature | feature_name, time_to_activate | P0 |
+[Include 12-15 events covering the full user journey]
+
 Be stage-appropriate. No enterprise tooling for pre-seed startups."""
     },
 
@@ -781,27 +916,45 @@ Given the company info below, produce:
 |---|---------|------|-------------|-------------|-------------|----------------|----------|
 [15 specific companies with full details]
 
-### 3. Partnership Outreach Templates
+### 3. Partnership Outreach Emails (5 Ready-to-Send)
 
-**Template 1: Integration Partnership**
+**Email 1: Integration Partnership**
+```
+Subject: [Specific subject line with {{partner_company}} token]
+
+Hi {{first_name}},
+
+[Write 4-5 sentence email body. Include: specific observation about their product, what the integration would look like, mutual benefit, soft ask. Use {{company_name}} and {{partner_company}} tokens. End with a specific ask.]
+
+PS: [One line about quick win or shared customer]
+```
+
+**Email 2: Co-Marketing Partnership**
 ```
 Subject: [Subject line]
 
-[Full email — personalized template with clear value prop for THEM]
+[Same format — full email with personalization tokens, PS line]
 ```
 
-**Template 2: Co-Marketing Partnership**
-```
-Subject: [Subject line]
-
-[Full email]
-```
-
-**Template 3: Channel Partnership**
+**Email 3: Channel/Referral Partnership**
 ```
 Subject: [Subject line]
 
-[Full email]
+[Same format]
+```
+
+**Email 4: Follow-up (No Response)**
+```
+Subject: Re: [original subject]
+
+[Short 2-3 sentence follow-up, reference original email, add new angle]
+```
+
+**Email 5: Warm Intro Request**
+```
+Subject: [Subject line]
+
+[Email to send to a mutual connection asking for an intro to the partner]
 ```
 
 ### 4. Partnership Tiers & Deal Structures
@@ -832,6 +985,49 @@ Subject: [Subject line]
 - [ ] Set up referral tracking
 - [ ] Create partner onboarding doc
 - [ ] Schedule first co-marketing activity
+
+### 7. LinkedIn Partnership Outreach Sequence
+**Touch 1 — Connection Request Note (under 300 chars):**
+```
+[Exact message mentioning their product + yours, why you're connecting]
+```
+
+**Touch 2 — Post-Accept Message (Day 1):**
+```
+[Value-add message, share relevant insight or content]
+```
+
+**Touch 3 — Partnership Pitch (Day 3):**
+```
+[Full pitch message with specific partnership idea + ask for a call]
+```
+
+### 8. Partnership One-Pager (Full Draft)
+```
+[PARTNERSHIP PROPOSAL: {{company_name}} x {{partner_company}}]
+
+THE OPPORTUNITY:
+[2-3 sentences on market context and why this partnership makes sense]
+
+WHAT WE PROPOSE:
+[3 bullet points on what the partnership looks like]
+
+MUTUAL BENEFITS:
+For {{partner_company}}:
+- [Benefit 1]
+- [Benefit 2]
+
+For {{company_name}}:
+- [Benefit 1]
+- [Benefit 2]
+
+NEXT STEPS:
+1. [First step]
+2. [Second step]
+3. [Third step]
+
+[Contact info placeholder]
+```
 
 Be specific with company names. Every template should be sendable today."""
     },
@@ -918,6 +1114,43 @@ How to convert without being salesy:
 ### 8. Community Health Metrics
 | Metric | Target | Measure weekly |
 [8-10 metrics]
+
+### 9. Platform Setup Guide
+Step-by-step setup instructions for the recommended platform:
+
+**If Discord:**
+1. Create server with name "[Community Name]"
+2. Create categories and channels:
+   - WELCOME category: #rules, #introductions
+   - DISCUSSION category: #[topic-1], #[topic-2], #[topic-3]
+   - RESOURCES category: #tools, #jobs, #content
+   - COMMUNITY category: #wins, #feedback, #off-topic
+3. Bot setup:
+   - Add MEE6 or Carl-bot for auto-moderation
+   - Welcome message configuration
+   - Role assignment rules
+4. Permissions:
+   - @everyone: Read #rules, write #introductions
+   - @member: Access all discussion channels
+   - @contributor: Pin messages, create threads
+   - @moderator: Manage messages, timeout users
+5. Server settings: Verification level, explicit content filter, default notifications
+
+**If Slack:** [Equivalent setup steps]
+**If Circle:** [Equivalent setup steps]
+
+### 10. First 10 Discussion Prompts
+Ready-to-post conversation starters for the first 2 weeks:
+1. "[Engaging question related to ICP's biggest pain point]"
+2. "[Poll: What's your biggest challenge with X?]"
+3. "[Share your stack: What tools do you use for X?]"
+4. "[Hot take discussion: Is [industry trend] overhyped?]"
+5. "[Resource share: Best [resource type] you've found this month?]"
+6. "[AMA prompt: Ask me anything about [founder's expertise]]"
+7. "[Challenge: Try [specific tactic] this week and share results]"
+8. "[Case study discussion: How [company] did [thing] — thoughts?]"
+9. "[Feedback request: We're building [feature], what would you want?]"
+10. "[Wins thread: Share a recent win, no matter how small]"
 
 Don't build community for community's sake. This needs to drive business outcomes."""
     },
