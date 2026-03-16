@@ -9,6 +9,7 @@ Two modes:
 import os
 import io
 import logging
+import zipfile
 from datetime import datetime
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
@@ -28,6 +29,9 @@ from app.agents.rules import (
 from app.agents.knowledge import get_knowledge_context
 from app.agents.schemas import get_format_instructions, validate_output_structure
 from app.agents.clarifier import get_clarifying_questions, get_plan_variants
+from app.connectors.csv_connector import generate_csv, generate_platform_csv
+from app.connectors.base import get_connector
+from app.connectors import hubspot as _hubspot_import  # noqa: F401 — register connector
 from app.validation import (
     validate_agent_id,
     validate_company_context,
@@ -513,6 +517,167 @@ async def export_single(request: Request):
         media_type="text/markdown",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+
+@app.post("/api/export-csv")
+async def export_csv(request: Request):
+    """Export a single agent's output as CSV file(s)."""
+    client_ip = export_limiter.get_client_ip(request)
+    if not export_limiter.check(client_ip):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded.")
+
+    body = await request.json()
+    agent_id = body.get("agent_id", "")
+    content = validate_text_field(body.get("content", ""), "content", max_length=100_000)
+    company_name = validate_company_name(body.get("company_name", "Company"))
+
+    csvs = generate_csv(agent_id, content)
+    if not csvs:
+        return JSONResponse({"status": "empty", "message": "No structured data found to export as CSV."})
+
+    # If single CSV, return directly; if multiple, zip them
+    if len(csvs) == 1:
+        buffer = io.BytesIO(csvs[0]["content"].encode("utf-8"))
+        filename = f"coldstart-{csvs[0]['filename']}-{slug_name(company_name)}.csv"
+        return StreamingResponse(
+            buffer,
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+
+    # Multiple CSVs — bundle as ZIP
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for csv_file in csvs:
+            zf.writestr(f"{csv_file['filename']}.csv", csv_file["content"])
+    zip_buffer.seek(0)
+    filename = f"coldstart-{agent_id}-{slug_name(company_name)}.zip"
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@app.post("/api/export-csv-all")
+async def export_csv_all(request: Request):
+    """Export all agent outputs as a ZIP of CSV files."""
+    client_ip = export_limiter.get_client_ip(request)
+    if not export_limiter.check(client_ip):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded.")
+
+    body = await request.json()
+    company_name = validate_company_name(body.get("company_name", "Company"))
+    results_data = validate_export_results(body.get("results", {}))
+
+    zip_buffer = io.BytesIO()
+    file_count = 0
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for agent_id, agent_data in results_data.items():
+            content = agent_data.get("content", "")
+            if not content:
+                continue
+            csvs = generate_csv(agent_id, content)
+            for csv_file in csvs:
+                zf.writestr(f"{csv_file['filename']}.csv", csv_file["content"])
+                file_count += 1
+
+    if file_count == 0:
+        return JSONResponse({"status": "empty", "message": "No structured data found to export."})
+
+    zip_buffer.seek(0)
+    filename = f"coldstart-gtm-{slug_name(company_name)}.zip"
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@app.post("/api/export-formatted/{platform}")
+async def export_formatted(platform: str, request: Request):
+    """Export agent output as platform-formatted CSV (hubspot or apollo)."""
+    client_ip = export_limiter.get_client_ip(request)
+    if not export_limiter.check(client_ip):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded.")
+
+    if platform not in ("hubspot", "apollo"):
+        raise HTTPException(status_code=400, detail=f"Unsupported platform: {platform}")
+
+    body = await request.json()
+    agent_id = body.get("agent_id", "")
+    content = validate_text_field(body.get("content", ""), "content", max_length=100_000)
+    company_name = validate_company_name(body.get("company_name", "Company"))
+
+    result = generate_platform_csv(agent_id, content, platform)
+    if not result:
+        return JSONResponse({
+            "status": "empty",
+            "message": f"No {platform}-formatted data available for {agent_id}.",
+        })
+
+    buffer = io.BytesIO(result["content"].encode("utf-8"))
+    filename = f"coldstart-{result['filename']}-{slug_name(company_name)}.csv"
+    return StreamingResponse(
+        buffer,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@app.post("/api/export-to/hubspot")
+async def export_to_hubspot(request: Request):
+    """Push agent output directly to HubSpot via API."""
+    client_ip = export_limiter.get_client_ip(request)
+    if not export_limiter.check(client_ip):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded.")
+
+    body = await request.json()
+    agent_id = body.get("agent_id", "")
+    content = validate_text_field(body.get("content", ""), "content", max_length=100_000)
+    credentials = body.get("credentials", {})
+
+    if not isinstance(credentials, dict) or not credentials.get("api_key"):
+        raise HTTPException(status_code=400, detail="HubSpot API key required in credentials.api_key")
+
+    # Sanitize API key — only allow expected characters
+    api_key = credentials["api_key"]
+    if not isinstance(api_key, str) or len(api_key) > 500:
+        raise HTTPException(status_code=400, detail="Invalid API key format")
+
+    connector = get_connector("hubspot")
+    if not connector:
+        raise HTTPException(status_code=500, detail="HubSpot connector not available")
+
+    result = await connector.export(
+        agent_id=agent_id,
+        parsed_data={"raw": content},
+        credentials={"api_key": api_key},
+    )
+    return JSONResponse(result)
+
+
+@app.post("/api/test-connection/{platform}")
+async def test_connection(platform: str, request: Request):
+    """Test connection to an external platform."""
+    if platform not in ("hubspot",):
+        raise HTTPException(status_code=400, detail=f"Unsupported platform: {platform}")
+
+    body = await request.json()
+    credentials = body.get("credentials", {})
+
+    connector = get_connector(platform)
+    if not connector:
+        raise HTTPException(status_code=500, detail=f"{platform} connector not available")
+
+    valid = connector.validate_credentials(credentials)
+    return JSONResponse({"status": "connected" if valid else "failed", "platform": platform})
+
+
+def slug_name(s: str) -> str:
+    """Create a URL-safe slug from a string."""
+    import re as _re
+    return _re.sub(r"[^a-z0-9-]", "", s.lower().replace(" ", "-"))
 
 
 def generate_demo_content(agent_id, agent, company_context):

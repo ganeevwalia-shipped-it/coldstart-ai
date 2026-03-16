@@ -73,6 +73,9 @@ Don't sell to agencies, consulting firms, or pre-revenue startups
 
 ### Lead Qualification
 | Criteria | Weight | Score |
+
+### Ad Platform Audience Definitions
+Google Ads, Facebook, LinkedIn targeting
 """
         result = validate_output_structure("icp_architect", content)
         assert result["valid"] is True
@@ -98,13 +101,13 @@ Some content here
         assert result["completeness"] == 1.0
 
     def test_completeness_calculation(self):
-        # ICP has 8 required sections, give it 4
+        # ICP has 9 required sections, give it 4
         content = "Primary ICP\nQualifying Criteria\nDisqualifying Criteria\nCore Pains"
         result = validate_output_structure("icp_architect", content)
-        assert result["completeness"] == 0.5  # 4/8
+        assert result["completeness"] == round(4 / 9, 2)  # 4/9
 
     def test_case_insensitive_matching(self):
-        content = "primary icp\nqualifying criteria\ndisqualifying criteria\ncore pains\ndesired outcomes\nanti-icp\nbuying signals\nlead qualification"
+        content = "primary icp\nqualifying criteria\ndisqualifying criteria\ncore pains\ndesired outcomes\nanti-icp\nbuying signals\nlead qualification\nad platform audience definitions"
         result = validate_output_structure("icp_architect", content)
         assert result["valid"] is True
 
@@ -118,6 +121,7 @@ Objections buyers raise
 Rebuttals to each objection
 Messaging Hierarchy with pillars
 Copy Bank with ready text
+Website Section Copy for key pages
 """
         result = validate_output_structure("positioning_strategist", content)
         assert result["valid"] is True
@@ -129,6 +133,7 @@ Channel Kill List
 90-Day Roadmap week by week
 Budget Scenarios for different levels
 Kill Criteria for each channel
+Week 1 Sprint Plan day by day
 """
         result = validate_output_structure("channel_mapper", content)
         assert result["valid"] is True

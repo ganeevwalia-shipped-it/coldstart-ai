@@ -202,7 +202,7 @@ async function runAgentsPro() {
 function onAllComplete() {
     document.getElementById('status-text').textContent = `All ${completedCount} agents complete`;
     document.querySelector('#global-status .status-dot').classList.remove('running');
-    document.getElementById('export-all-btn').style.display = 'block';
+    document.getElementById('export-all-dropdown').style.display = 'inline-block';
 }
 
 // Export functions
@@ -291,6 +291,244 @@ async function refineAgent() {
         btn.disabled = false;
         btn.textContent = 'Re-run with Feedback';
     }
+}
+
+// ============ EXPORT MENUS ============
+function toggleExportMenu(type) {
+    const menuId = `export-menu-${type}`;
+    const menu = document.getElementById(menuId);
+    if (!menu) return;
+    const isVisible = menu.style.display !== 'none';
+    // Close all menus first
+    document.querySelectorAll('.export-menu').forEach(m => m.style.display = 'none');
+    if (!isVisible) menu.style.display = 'block';
+}
+
+// Close menus on outside click
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.export-dropdown')) {
+        document.querySelectorAll('.export-menu').forEach(m => m.style.display = 'none');
+    }
+});
+
+// ============ CSV EXPORTS ============
+async function exportCSVSingle() {
+    if (!activeAgent || !results[activeAgent]) return;
+    try {
+        const response = await fetch('/api/export-csv', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                agent_id: activeAgent,
+                content: results[activeAgent].content,
+                company_name: input.company_name,
+            }),
+        });
+        if (!response.ok) {
+            const data = await response.json();
+            showToast(data.message || 'No CSV data available', 'info');
+            return;
+        }
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('json')) {
+            const data = await response.json();
+            showToast(data.message || 'No CSV data available', 'info');
+            return;
+        }
+        const blob = await response.blob();
+        const disposition = response.headers.get('content-disposition') || '';
+        const filenameMatch = disposition.match(/filename=(.+)/);
+        const filename = filenameMatch ? filenameMatch[1] : `coldstart-${activeAgent}.csv`;
+        downloadBlob(blob, filename);
+        showToast('CSV exported!', 'success');
+    } catch (err) {
+        showToast('Export failed: ' + err.message, 'error');
+    }
+}
+
+async function exportCSVAll() {
+    try {
+        const response = await fetch('/api/export-csv-all', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                company_name: input.company_name,
+                results: results,
+            }),
+        });
+        if (!response.ok) {
+            const data = await response.json();
+            showToast(data.message || 'No CSV data available', 'info');
+            return;
+        }
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('json')) {
+            const data = await response.json();
+            showToast(data.message || 'No CSV data available', 'info');
+            return;
+        }
+        const blob = await response.blob();
+        downloadBlob(blob, `coldstart-gtm-${slug(input.company_name)}.zip`);
+        showToast('All CSVs exported!', 'success');
+    } catch (err) {
+        showToast('Export failed: ' + err.message, 'error');
+    }
+}
+
+// ============ PLATFORM-FORMATTED EXPORTS ============
+async function exportPlatformSingle(platform) {
+    if (!activeAgent || !results[activeAgent]) return;
+    try {
+        const response = await fetch(`/api/export-formatted/${platform}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                agent_id: activeAgent,
+                content: results[activeAgent].content,
+                company_name: input.company_name,
+            }),
+        });
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('json')) {
+            const data = await response.json();
+            showToast(data.message || `No ${platform} data available for this agent`, 'info');
+            return;
+        }
+        const blob = await response.blob();
+        const disposition = response.headers.get('content-disposition') || '';
+        const filenameMatch = disposition.match(/filename=(.+)/);
+        const filename = filenameMatch ? filenameMatch[1] : `coldstart-${platform}-${activeAgent}.csv`;
+        downloadBlob(blob, filename);
+        showToast(`${platform} CSV exported!`, 'success');
+    } catch (err) {
+        showToast('Export failed: ' + err.message, 'error');
+    }
+}
+
+async function exportPlatformAll(platform) {
+    // Export each agent that has platform support
+    let exported = 0;
+    for (const [agentId, agentData] of Object.entries(results)) {
+        if (!agentData.content) continue;
+        try {
+            const response = await fetch(`/api/export-formatted/${platform}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    agent_id: agentId,
+                    content: agentData.content,
+                    company_name: input.company_name,
+                }),
+            });
+            const contentType = response.headers.get('content-type') || '';
+            if (!contentType.includes('json')) {
+                const blob = await response.blob();
+                const disposition = response.headers.get('content-disposition') || '';
+                const filenameMatch = disposition.match(/filename=(.+)/);
+                const filename = filenameMatch ? filenameMatch[1] : `coldstart-${platform}-${agentId}.csv`;
+                downloadBlob(blob, filename);
+                exported++;
+            }
+        } catch { /* skip agents with no platform data */ }
+    }
+    if (exported > 0) {
+        showToast(`Exported ${exported} ${platform} CSV file(s)`, 'success');
+    } else {
+        showToast(`No ${platform}-formatted data available`, 'info');
+    }
+}
+
+// ============ HUBSPOT LIVE PUSH ============
+function showHubSpotModal() {
+    document.getElementById('hubspot-modal').style.display = 'flex';
+    const savedKey = sessionStorage.getItem('hubspot_api_key');
+    if (savedKey) {
+        document.getElementById('hubspot-api-key').value = savedKey;
+        document.getElementById('hubspot-push-btn').disabled = false;
+    }
+}
+
+function closeHubSpotModal() {
+    document.getElementById('hubspot-modal').style.display = 'none';
+    document.getElementById('hubspot-status').textContent = '';
+}
+
+async function testHubSpotConnection() {
+    const apiKey = document.getElementById('hubspot-api-key').value.trim();
+    if (!apiKey) return;
+
+    const btn = document.getElementById('hubspot-test-btn');
+    const status = document.getElementById('hubspot-status');
+    btn.disabled = true;
+    btn.textContent = 'Testing...';
+    status.textContent = '';
+
+    try {
+        const response = await fetch('/api/test-connection/hubspot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ credentials: { api_key: apiKey } }),
+        });
+        const data = await response.json();
+        if (data.status === 'connected') {
+            status.innerHTML = '<span style="color:#059669;">Connected successfully!</span>';
+            sessionStorage.setItem('hubspot_api_key', apiKey);
+            document.getElementById('hubspot-push-btn').disabled = false;
+        } else {
+            status.innerHTML = '<span style="color:#dc2626;">Connection failed. Check your API key.</span>';
+        }
+    } catch (err) {
+        status.innerHTML = `<span style="color:#dc2626;">Error: ${err.message}</span>`;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Test Connection';
+    }
+}
+
+async function pushToHubSpot() {
+    if (!activeAgent || !results[activeAgent]) return;
+    const apiKey = sessionStorage.getItem('hubspot_api_key') || document.getElementById('hubspot-api-key').value.trim();
+    if (!apiKey) return;
+
+    const btn = document.getElementById('hubspot-push-btn');
+    btn.disabled = true;
+    btn.textContent = 'Pushing...';
+
+    try {
+        const response = await fetch('/api/export-to/hubspot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                agent_id: activeAgent,
+                content: results[activeAgent].content,
+                credentials: { api_key: apiKey },
+            }),
+        });
+        const data = await response.json();
+        closeHubSpotModal();
+
+        if (data.status === 'success' || data.status === 'partial') {
+            const created = (data.created || []).length;
+            const errors = (data.errors || []).length;
+            showToast(`HubSpot: ${created} items created${errors ? `, ${errors} errors` : ''}`, errors ? 'info' : 'success');
+        } else {
+            showToast(data.message || 'HubSpot export completed', 'info');
+        }
+    } catch (err) {
+        showToast('HubSpot push failed: ' + err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Push Data';
+    }
+}
+
+// ============ TOAST NOTIFICATIONS ============
+function showToast(message, type = 'info') {
+    const toast = document.getElementById('export-toast');
+    toast.textContent = message;
+    toast.className = `export-toast ${type}`;
+    toast.style.display = 'block';
+    setTimeout(() => { toast.style.display = 'none'; }, 4000);
 }
 
 // Start based on mode

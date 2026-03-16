@@ -23,9 +23,17 @@
                 <span class="status-dot running"></span>
                 <span id="status-text">Building GTM system...</span>
             </div>
-            <button class="export-all-btn" id="export-all-btn" onclick="exportAll()" style="display:none;">
-                Download Full Package ↓
-            </button>
+            <div class="export-dropdown" id="export-all-dropdown" style="display:none;">
+                <button class="export-all-btn" onclick="toggleExportMenu('all')">
+                    Export Full Package ▾
+                </button>
+                <div class="export-menu" id="export-menu-all" style="display:none;">
+                    <button onclick="exportAll()">Markdown (.md)</button>
+                    <button onclick="exportCSVAll()">CSV (all agents)</button>
+                    <button onclick="exportPlatformAll('hubspot')">HubSpot CSV</button>
+                    <button onclick="exportPlatformAll('apollo')">Apollo CSV</button>
+                </div>
+            </div>
         </div>
     </nav>
 
@@ -68,9 +76,19 @@
                         <button class="btn-refine" id="refine-btn" onclick="toggleRefinePanel(true)" style="display:none;">
                             Refine ↻
                         </button>
-                        <button class="btn-export" onclick="exportSingle()">
-                            Download This ↓
-                        </button>
+                        <div class="export-dropdown">
+                            <button class="btn-export" onclick="toggleExportMenu('single')">
+                                Export ▾
+                            </button>
+                            <div class="export-menu" id="export-menu-single" style="display:none;">
+                                <button onclick="exportSingle()">Markdown (.md)</button>
+                                <button onclick="exportCSVSingle()">CSV</button>
+                                <button onclick="exportPlatformSingle('hubspot')">HubSpot CSV</button>
+                                <button onclick="exportPlatformSingle('apollo')">Apollo CSV</button>
+                                <hr>
+                                <button onclick="showHubSpotModal()">Push to HubSpot</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -96,6 +114,69 @@
             </div>
         </main>
     </div>
+
+    <!-- HubSpot Credentials Modal -->
+    <div class="modal-overlay" id="hubspot-modal" style="display:none;" onclick="if(event.target===this)closeHubSpotModal()">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Connect to HubSpot</h3>
+                <button class="modal-close" onclick="closeHubSpotModal()">&times;</button>
+            </div>
+            <p style="margin:0 0 16px;color:var(--text-muted);font-size:14px;">
+                Enter your HubSpot Private App token to push data directly.
+            </p>
+            <input type="password" id="hubspot-api-key" placeholder="pat-na1-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                   style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;margin-bottom:12px;">
+            <div id="hubspot-status" style="margin-bottom:12px;font-size:13px;"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <button class="btn-refine" onclick="testHubSpotConnection()" id="hubspot-test-btn">Test Connection</button>
+                <button class="btn-export" onclick="pushToHubSpot()" id="hubspot-push-btn" disabled>Push Data</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast notification -->
+    <div id="export-toast" class="export-toast" style="display:none;"></div>
+
+    <style>
+        .export-dropdown { position: relative; display: inline-block; }
+        .export-menu {
+            position: absolute; top: 100%; right: 0; z-index: 100;
+            background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+            min-width: 180px; padding: 4px 0; margin-top: 4px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+        .export-menu button {
+            display: block; width: 100%; text-align: left;
+            padding: 8px 16px; border: none; background: none;
+            color: var(--text); font-size: 13px; cursor: pointer;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .export-menu button:hover { background: var(--border); }
+        .export-menu hr { border: none; border-top: 1px solid var(--border); margin: 4px 0; }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6); z-index: 200;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .modal-content {
+            background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
+            padding: 24px; max-width: 480px; width: 90%;
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .modal-header h3 { margin: 0; }
+        .modal-close { background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; }
+        .export-toast {
+            position: fixed; bottom: 24px; right: 24px; z-index: 300;
+            padding: 12px 20px; border-radius: 8px; font-size: 14px;
+            font-family: 'Space Grotesk', sans-serif;
+            animation: toast-in 0.3s ease;
+        }
+        .export-toast.success { background: #065f46; color: #d1fae5; border: 1px solid #059669; }
+        .export-toast.error { background: #7f1d1d; color: #fecaca; border: 1px solid #dc2626; }
+        .export-toast.info { background: #1e3a5f; color: #bfdbfe; border: 1px solid #3b82f6; }
+        @keyframes toast-in { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    </style>
 
     <script src="/static/js/dashboard.js"></script>
 </body>
