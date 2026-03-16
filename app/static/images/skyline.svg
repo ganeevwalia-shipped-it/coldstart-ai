@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 320" preserveAspectRatio="xMidYMax slice">
+  <defs>
+    <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e8e6e1" stop-opacity="0"/>
+      <stop offset="60%" stop-color="#e8e6e1" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#d5d2cb" stop-opacity="0.5"/>
+    </linearGradient>
+  </defs>
+  <!-- Subtle background wash -->
+  <rect width="1400" height="320" fill="url(#skyGrad)"/>
+  <!-- Far buildings (lighter, smaller) -->
+  <g fill="#c8c5be" opacity="0.5">
+    <rect x="80" y="160" width="32" height="160"/>
+    <rect x="130" y="140" width="28" height="180"/>
+    <rect x="200" y="170" width="24" height="150"/>
+    <rect x="340" y="150" width="30" height="170"/>
+    <rect x="450" y="175" width="22" height="145"/>
+    <rect x="520" y="155" width="26" height="165"/>
+    <rect x="820" y="145" width="28" height="175"/>
+    <rect x="900" y="170" width="24" height="150"/>
+    <rect x="1020" y="160" width="30" height="160"/>
+    <rect x="1150" y="150" width="26" height="170"/>
+    <rect x="1250" y="165" width="22" height="155"/>
+    <rect x="1320" y="175" width="28" height="145"/>
+  </g>
+  <!-- Mid buildings -->
+  <g fill="#b5b1a8" opacity="0.65">
+    <rect x="50" y="180" width="48" height="140"/>
+    <rect x="160" y="130" width="44" height="190"/>
+    <rect x="260" y="155" width="50" height="165"/>
+    <rect x="380" y="140" width="38" height="180"/>
+    <rect x="480" y="160" width="42" height="160"/>
+    <rect x="580" y="120" width="36" height="200"/>
+    <rect x="720" y="145" width="46" height="175"/>
+    <rect x="850" y="130" width="40" height="190"/>
+    <rect x="960" y="155" width="44" height="165"/>
+    <rect x="1080" y="140" width="48" height="180"/>
+    <rect x="1190" y="150" width="38" height="170"/>
+    <rect x="1300" y="160" width="42" height="160"/>
+  </g>
+  <!-- Front buildings (darkest, tallest) -->
+  <g fill="#9e9a90" opacity="0.7">
+    <!-- Left cluster -->
+    <rect x="20" y="200" width="60" height="120"/>
+    <rect x="100" y="150" width="55" height="170"/>
+    <rect x="170" y="110" width="40" height="210"/>
+    <!-- Tall tower left -->
+    <rect x="225" y="60" width="22" height="260"/>
+    <rect x="218" y="55" width="36" height="12"/>
+    <!-- Mid cluster -->
+    <rect x="290" y="135" width="52" height="185"/>
+    <rect x="355" y="160" width="45" height="160"/>
+    <rect x="420" y="120" width="56" height="200"/>
+    <rect x="490" y="145" width="40" height="175"/>
+    <!-- Central tall tower -->
+    <rect x="558" y="40" width="24" height="280"/>
+    <rect x="550" y="35" width="40" height="14"/>
+    <rect x="565" y="10" width="10" height="25"/>
+    <!-- Right mid cluster -->
+    <rect x="610" y="140" width="50" height="180"/>
+    <rect x="680" y="160" width="44" height="160"/>
+    <rect x="740" y="110" width="58" height="210"/>
+    <rect x="810" y="145" width="42" height="175"/>
+    <!-- Right tall tower -->
+    <rect x="878" y="50" width="24" height="270"/>
+    <rect x="870" y="45" width="40" height="14"/>
+    <!-- Right cluster -->
+    <rect x="930" y="135" width="48" height="185"/>
+    <rect x="1000" y="155" width="52" height="165"/>
+    <rect x="1060" y="120" width="46" height="200"/>
+    <rect x="1130" y="140" width="55" height="180"/>
+    <rect x="1200" y="165" width="40" height="155"/>
+    <rect x="1260" y="130" width="50" height="190"/>
+    <rect x="1330" y="155" width="70" height="165"/>
+  </g>
+  <!-- Windows (tiny light dots) -->
+  <g fill="#fafaf8" opacity="0.4">
+    <!-- Tower 1 windows -->
+    <rect x="230" y="70" width="3" height="3" rx="0.5"/>
+    <rect x="237" y="70" width="3" height="3" rx="0.5"/>
+    <rect x="230" y="80" width="3" height="3" rx="0.5"/>
+    <rect x="237" y="80" width="3" height="3" rx="0.5"/>
+    <rect x="230" y="90" width="3" height="3" rx="0.5"/>
+    <rect x="237" y="90" width="3" height="3" rx="0.5"/>
+    <rect x="230" y="100" width="3" height="3" rx="0.5"/>
+    <rect x="237" y="100" width="3" height="3" rx="0.5"/>
+    <!-- Tower 2 windows -->
+    <rect x="565" y="55" width="3" height="3" rx="0.5"/>
+    <rect x="572" y="55" width="3" height="3" rx="0.5"/>
+    <rect x="565" y="65" width="3" height="3" rx="0.5"/>
+    <rect x="572" y="65" width="3" height="3" rx="0.5"/>
+    <rect x="565" y="75" width="3" height="3" rx="0.5"/>
+    <rect x="572" y="75" width="3" height="3" rx="0.5"/>
+    <rect x="565" y="85" width="3" height="3" rx="0.5"/>
+    <rect x="572" y="85" width="3" height="3" rx="0.5"/>
+    <!-- Tower 3 windows -->
+    <rect x="885" y="65" width="3" height="3" rx="0.5"/>
+    <rect x="892" y="65" width="3" height="3" rx="0.5"/>
+    <rect x="885" y="75" width="3" height="3" rx="0.5"/>
+    <rect x="892" y="75" width="3" height="3" rx="0.5"/>
+    <rect x="885" y="85" width="3" height="3" rx="0.5"/>
+    <rect x="892" y="85" width="3" height="3" rx="0.5"/>
+  </g>
+</svg>
