@@ -87,6 +87,7 @@
                                 <button onclick="exportPlatformSingle('apollo')">Apollo CSV</button>
                                 <hr>
                                 <button onclick="showHubSpotModal()">Push to HubSpot</button>
+                                <button onclick="showMetaAdsModal()">Push to Meta Ads</button>
                             </div>
                         </div>
                     </div>
@@ -131,6 +132,28 @@
             <div style="display:flex;gap:8px;justify-content:flex-end;">
                 <button class="btn-refine" onclick="testHubSpotConnection()" id="hubspot-test-btn">Test Connection</button>
                 <button class="btn-export" onclick="pushToHubSpot()" id="hubspot-push-btn" disabled>Push Data</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Meta Ads Credentials Modal -->
+    <div class="modal-overlay" id="meta-ads-modal" style="display:none;" onclick="if(event.target===this)closeMetaAdsModal()">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Connect to Meta Ads</h3>
+                <button class="modal-close" onclick="closeMetaAdsModal()">&times;</button>
+            </div>
+            <p style="margin:0 0 16px;color:var(--text-muted);font-size:14px;">
+                Enter your Meta System User Token and Ad Account ID to push audiences directly.
+            </p>
+            <input type="password" id="meta-access-token" placeholder="System User Token"
+                   style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;margin-bottom:8px;">
+            <input type="text" id="meta-ad-account-id" placeholder="Ad Account ID (e.g. act_123456789)"
+                   style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;margin-bottom:12px;">
+            <div id="meta-ads-status" style="margin-bottom:12px;font-size:13px;"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <button class="btn-refine" onclick="testMetaAdsConnection()" id="meta-ads-test-btn">Test Connection</button>
+                <button class="btn-export" onclick="pushToMetaAds()" id="meta-ads-push-btn" disabled>Push Audiences</button>
             </div>
         </div>
     </div>

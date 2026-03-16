@@ -436,3 +436,90 @@ class TestInputEdgeCases:
         # In demo mode, should still return structured demo content
         assert data["status"] == "demo"
         assert "HACKED" not in data["status"]
+
+
+# ========================================
+# TRACKING ENDPOINT
+# ========================================
+
+class TestTrackingEndpoint:
+    """POST /api/track — Feedback loop tracking."""
+
+    @pytest.mark.anyio
+    async def test_valid_export_event(self, client):
+        r = await client.post("/api/track", json={
+            "event": "export",
+            "agent_id": "icp_architect",
+            "mode": "free",
+            "quality_score": 75,
+        })
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    @pytest.mark.anyio
+    async def test_valid_refine_event(self, client):
+        r = await client.post("/api/track", json={
+            "event": "refine",
+            "agent_id": "positioning_strategist",
+        })
+        assert r.status_code == 200
+
+    @pytest.mark.anyio
+    async def test_valid_view_event(self, client):
+        r = await client.post("/api/track", json={
+            "event": "view",
+            "agent_id": "channel_mapper",
+        })
+        assert r.status_code == 200
+
+    @pytest.mark.anyio
+    async def test_valid_skip_event(self, client):
+        r = await client.post("/api/track", json={
+            "event": "skip",
+            "agent_id": "sales_playbook",
+        })
+        assert r.status_code == 200
+
+    @pytest.mark.anyio
+    async def test_invalid_event_returns_400(self, client):
+        r = await client.post("/api/track", json={
+            "event": "invalid_event",
+            "agent_id": "icp_architect",
+        })
+        assert r.status_code == 400
+
+    @pytest.mark.anyio
+    async def test_empty_event_returns_400(self, client):
+        r = await client.post("/api/track", json={
+            "event": "",
+            "agent_id": "icp_architect",
+        })
+        assert r.status_code == 400
+
+
+# ========================================
+# META ADS ENDPOINT
+# ========================================
+
+class TestMetaAdsEndpoint:
+    """POST /api/export-to/meta-ads"""
+
+    @pytest.mark.anyio
+    async def test_missing_access_token_returns_400(self, client):
+        r = await client.post("/api/export-to/meta-ads", json={
+            "agent_id": "icp_architect",
+            "content": "test",
+            "credentials": {},
+        })
+        assert r.status_code == 400
+        assert "access_token" in r.json()["detail"]
+
+    @pytest.mark.anyio
+    async def test_missing_ad_account_id_returns_400(self, client):
+        r = await client.post("/api/export-to/meta-ads", json={
+            "agent_id": "icp_architect",
+            "content": "test",
+            "credentials": {"access_token": "test-token"},
+        })
+        assert r.status_code == 400
+        assert "ad_account_id" in r.json()["detail"]

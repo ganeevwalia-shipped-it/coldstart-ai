@@ -127,3 +127,4 @@ class RateLimiter:
 # Global rate limiters
 generate_limiter = RateLimiter(max_requests=30, window_seconds=60)  # 30 gen/min
 export_limiter = RateLimiter(max_requests=20, window_seconds=60)    # 20 exports/min
+track_limiter = RateLimiter(max_requests=100, window_seconds=60)    # 100 track/min

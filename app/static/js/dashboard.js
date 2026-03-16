@@ -32,6 +32,14 @@ BUSINESS MODEL: ${input.business_model}
 MONTHLY GTM BUDGET: ${input.budget || 'Not specified'}
 PRIMARY GTM MOTION: ${input.gtm_motion || 'Not specified'}
 CURRENT CHALLENGES: ${input.current_challenges || 'Not specified'}
+COMPETITIVE POSITIONING: ${input.competitive_positioning || 'Not available'}
+PRICING SIGNALS: ${input.pricing_signals || 'Not available'}
+COMPANY STAGE: ${input.company_stage_signals || 'Not available'}
+TECH STACK: ${input.tech_stack_signals || 'Not available'}
+TEAM SIZE: ${input.team_size_signals || 'Not available'}
+KEY INTEGRATIONS: ${input.key_integrations || 'Not available'}
+FUNDING: ${input.funding_signals || 'Not available'}
+HIRING: ${input.hiring_signals || 'Not available'}
 `;
 
 function showAgent(agentId) {
@@ -41,6 +49,10 @@ function showAgent(agentId) {
 
     activeAgent = agentId;
     const output = document.getElementById('agent-output');
+
+    // Track view with 3s debounce
+    if (viewTrackTimeout) clearTimeout(viewTrackTimeout);
+    viewTrackTimeout = setTimeout(() => trackEvent('view', agentId), 3000);
 
     if (results[agentId]) {
         const r = results[agentId];
@@ -62,7 +74,15 @@ function showAgent(agentId) {
                 const pct = Math.round((r.schema_validation.completeness || 0) * 100);
                 validationBadge = `<div class="validation-badge" title="Missing: ${(r.schema_validation.missing || []).join(', ')}">Schema: ${pct}% complete</div>`;
             }
-            output.innerHTML = `${validationBadge}<div class="agent-content">${marked.parse(r.content)}</div>`;
+            let qualityBadge = '';
+            if (r.quality_score) {
+                const qs = r.quality_score;
+                const color = qs.score >= 70 ? '#059669' : qs.score >= 40 ? '#d97706' : '#dc2626';
+                const label = qs.score < 40 ? ' — may be generic' : '';
+                const tooltip = (qs.flags || []).join('; ') || 'No issues';
+                qualityBadge = `<div class="quality-badge" style="color:${color};font-size:13px;margin-bottom:8px;" title="${tooltip}">Quality: ${qs.score}/100${label}</div>`;
+            }
+            output.innerHTML = `${validationBadge}${qualityBadge}<div class="agent-content">${marked.parse(r.content)}</div>`;
         } else if (r.status === 'error') {
             output.innerHTML = `<div class="agent-content" style="color: var(--error);">${r.content}</div>`;
         }
@@ -203,11 +223,20 @@ function onAllComplete() {
     document.getElementById('status-text').textContent = `All ${completedCount} agents complete`;
     document.querySelector('#global-status .status-dot').classList.remove('running');
     document.getElementById('export-all-dropdown').style.display = 'inline-block';
+
+    // Track skipped agents (never viewed)
+    const agents = input.agents || [];
+    agents.forEach(id => {
+        if (results[id] && results[id].status !== 'error') {
+            // Will be tracked as 'view' if user clicks — only track skip for unviewed
+        }
+    });
 }
 
 // Export functions
 async function exportSingle() {
     if (!activeAgent || !results[activeAgent]) return;
+    trackEvent('export', activeAgent);
     const response = await fetch('/api/export-single', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -222,6 +251,7 @@ async function exportSingle() {
 }
 
 async function exportAll() {
+    Object.keys(results).forEach(id => trackEvent('export', id));
     const response = await fetch('/api/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -264,6 +294,7 @@ async function refineAgent() {
     if (!activeAgent || !results[activeAgent]) return;
     const feedback = document.getElementById('refine-input').value.trim();
     if (!feedback) return;
+    trackEvent('refine', activeAgent);
 
     const btn = document.getElementById('refine-btn-submit');
     btn.disabled = true;
@@ -521,6 +552,113 @@ async function pushToHubSpot() {
         btn.textContent = 'Push Data';
     }
 }
+
+// ============ META ADS LIVE PUSH ============
+function showMetaAdsModal() {
+    document.getElementById('meta-ads-modal').style.display = 'flex';
+    const savedToken = sessionStorage.getItem('meta_access_token');
+    const savedAccount = sessionStorage.getItem('meta_ad_account_id');
+    if (savedToken) {
+        document.getElementById('meta-access-token').value = savedToken;
+    }
+    if (savedAccount) {
+        document.getElementById('meta-ad-account-id').value = savedAccount;
+    }
+    if (savedToken && savedAccount) {
+        document.getElementById('meta-ads-push-btn').disabled = false;
+    }
+}
+
+function closeMetaAdsModal() {
+    document.getElementById('meta-ads-modal').style.display = 'none';
+    document.getElementById('meta-ads-status').textContent = '';
+}
+
+async function testMetaAdsConnection() {
+    const token = document.getElementById('meta-access-token').value.trim();
+    if (!token) return;
+
+    const btn = document.getElementById('meta-ads-test-btn');
+    const status = document.getElementById('meta-ads-status');
+    btn.disabled = true;
+    btn.textContent = 'Testing...';
+    status.textContent = '';
+
+    try {
+        const response = await fetch('/api/test-connection/meta_ads', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ credentials: { access_token: token } }),
+        });
+        const data = await response.json();
+        if (data.status === 'connected') {
+            status.innerHTML = '<span style="color:#059669;">Connected successfully!</span>';
+            sessionStorage.setItem('meta_access_token', token);
+            const accountId = document.getElementById('meta-ad-account-id').value.trim();
+            if (accountId) {
+                sessionStorage.setItem('meta_ad_account_id', accountId);
+                document.getElementById('meta-ads-push-btn').disabled = false;
+            }
+        } else {
+            status.innerHTML = '<span style="color:#dc2626;">Connection failed. Check your System User Token.</span>';
+        }
+    } catch (err) {
+        status.innerHTML = `<span style="color:#dc2626;">Error: ${err.message}</span>`;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Test Connection';
+    }
+}
+
+async function pushToMetaAds() {
+    if (!activeAgent || !results[activeAgent]) return;
+    const token = sessionStorage.getItem('meta_access_token') || document.getElementById('meta-access-token').value.trim();
+    const accountId = sessionStorage.getItem('meta_ad_account_id') || document.getElementById('meta-ad-account-id').value.trim();
+    if (!token || !accountId) return;
+
+    const btn = document.getElementById('meta-ads-push-btn');
+    btn.disabled = true;
+    btn.textContent = 'Pushing...';
+
+    try {
+        const response = await fetch('/api/export-to/meta-ads', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                agent_id: activeAgent,
+                content: results[activeAgent].content,
+                credentials: { access_token: token, ad_account_id: accountId },
+            }),
+        });
+        const data = await response.json();
+        closeMetaAdsModal();
+
+        if (data.status === 'success' || data.status === 'partial') {
+            const created = (data.created || []).length;
+            const errors = (data.errors || []).length;
+            showToast(`Meta Ads: ${created} items created${errors ? `, ${errors} errors` : ''}`, errors ? 'info' : 'success');
+        } else {
+            showToast(data.message || 'Meta Ads export completed', 'info');
+        }
+    } catch (err) {
+        showToast('Meta Ads push failed: ' + err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Push Audiences';
+    }
+}
+
+// ============ EVENT TRACKING ============
+function trackEvent(event, agentId) {
+    const qs = results[agentId]?.quality_score;
+    fetch('/api/track', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({event, agent_id: agentId, mode, quality_score: qs?.score}),
+    }).catch(() => {}); // fire-and-forget
+}
+
+let viewTrackTimeout = null;
 
 // ============ TOAST NOTIFICATIONS ============
 function showToast(message, type = 'info') {

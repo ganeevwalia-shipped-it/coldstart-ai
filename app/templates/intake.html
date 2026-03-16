@@ -222,6 +222,7 @@ const AGENTS = [
 
 let scrapedUrl = '';
 let stage = '';
+let scrapeEnrichment = {};
 
 // Scrape
 async function doScrape() {
@@ -243,6 +244,18 @@ async function doScrape() {
         if (d.company_name) document.getElementById('company_name').value = d.company_name;
         if (d.product_description) document.getElementById('product_description').value = d.product_description;
         if (d.target_market) document.getElementById('target_market').value = d.target_market;
+        // Store enrichment fields for agent context
+        scrapeEnrichment = {
+            competitive_positioning: d.competitive_positioning || '',
+            pricing_signals: d.pricing_signals || '',
+            company_stage_signals: d.company_stage_signals || '',
+            tech_stack_signals: d.tech_stack_signals || '',
+            team_size_signals: d.team_size_signals || '',
+            key_integrations: d.key_integrations || '',
+            funding_signals: d.funding_signals || '',
+            hiring_signals: d.hiring_signals || '',
+            inferred_vertical: d.inferred_vertical || '',
+        };
         updateDescCount();
         document.getElementById('scrape-msg').textContent = d.scrape_failed ? 'Could not read site — fill in manually.' : 'Got it. Confirm below.';
         setTimeout(() => goTo(2), 700);

@@ -12,7 +12,10 @@ from app.agents.schemas import (
     validate_output_structure,
     get_format_instructions,
     _log_validation_failure,
+    _log_quality_score,
+    score_output_quality,
     VALIDATION_LOG_PATH,
+    QUALITY_LOG_PATH,
 )
 
 
@@ -215,3 +218,91 @@ class TestValidationLogging:
             schemas_module.VALIDATION_LOG_PATH = original_path
         finally:
             os.unlink(log_path)
+
+
+class TestScoreOutputQuality:
+    def test_high_quality_output(self):
+        company_context = "COMPANY: Acme Corp\nPRODUCT: AI-powered sales automation tool for SDR teams\nTARGET MARKET: B2B SaaS SDR managers at Series A startups\nSTAGE: MVP"
+        content = """
+## ICP for Acme Corp
+
+Acme Corp is building for SDR managers at Series A startups.
+
+### Primary ICP
+SDR managers at Series A B2B SaaS startups with 10-50 employees.
+Acme Corp solves their biggest pain: spending 40% of time on manual data entry.
+The SDR team needs automation to hit $50K MRR within 6 months.
+
+### Qualifying Criteria
+1. Company has raised Series A ($2-10M)
+2. SDR team of 3-8 people
+3. Using Salesforce or HubSpot
+
+Acme Corp's sales automation tool reduces first-touch time by 65%.
+Target: validate 50 prospects in first 30 days.
+"""
+        result = score_output_quality("icp_architect", content, company_context)
+        assert result["score"] >= 50
+        assert result["specificity"] > 0
+        assert result["actionability"] > 0
+        assert "score" in result
+        assert "flags" in result
+
+    def test_generic_output_scores_low(self):
+        company_context = "COMPANY: Acme Corp\nPRODUCT: CRM tool\nTARGET MARKET: businesses"
+        content = """
+Here is a generic strategy to drive growth and take it to the next level.
+You should leverage your network and optimize your funnel.
+This is a best-in-class approach with a holistic approach.
+Move the needle by streamlining your process and unlocking potential.
+This game changer paradigm shift will create synergy.
+"""
+        result = score_output_quality("icp_architect", content, company_context)
+        assert result["score"] < 50
+        assert len(result["flags"]) > 0
+
+    def test_company_name_not_mentioned_flag(self):
+        company_context = "COMPANY: SpecificCompanyName\nPRODUCT: test tool"
+        content = "This is generic output without mentioning any company."
+        result = score_output_quality("icp_architect", content, company_context)
+        assert "Company name not mentioned in output" in result["flags"]
+
+    def test_unknown_agent_still_scores(self):
+        result = score_output_quality("unknown_agent", "some content with 50% and $100", "COMPANY: Test")
+        assert "score" in result
+        assert result["score"] >= 0
+
+    def test_quality_logging(self):
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
+            log_path = f.name
+
+        try:
+            import app.agents.schemas as schemas_module
+            original_path = schemas_module.QUALITY_LOG_PATH
+            schemas_module.QUALITY_LOG_PATH = log_path
+
+            score_output_quality("test_agent", "some content", "COMPANY: Test")
+
+            with open(log_path) as f:
+                lines = f.readlines()
+            assert len(lines) == 1
+            entry = json.loads(lines[0])
+            assert entry["agent_id"] == "test_agent"
+            assert "score" in entry
+            assert "timestamp" in entry
+
+            schemas_module.QUALITY_LOG_PATH = original_path
+        finally:
+            os.unlink(log_path)
+
+    def test_budget_mismatch_detection(self):
+        company_context = "COMPANY: TestCo\nPRODUCT: test\nMONTHLY GTM BUDGET: $0 - bootstrap"
+        content = "You should invest in paid ads with a large budget of $50k per month."
+        result = score_output_quality("channel_mapper", content, company_context)
+        assert "Budget mismatch detected" in result["flags"]
+
+    def test_score_components_sum_correctly(self):
+        result = score_output_quality("icp_architect", "test", "COMPANY: Test")
+        total = result["specificity"] + result["actionability"] + result["tailoring"]
+        # Score is clamped 0-100
+        assert result["score"] == max(0, min(100, round(total)))

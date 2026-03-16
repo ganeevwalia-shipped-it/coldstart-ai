@@ -57,12 +57,13 @@ def is_vague_icp(target_market: str) -> bool:
     return False
 
 
-def score_input_quality(company_context: dict) -> dict:
+def score_input_quality(company_context: dict, enrichment: dict | None = None) -> dict:
     """
     Analyze input fields and return a quality score + issues.
 
     Args:
         company_context: Dict with keys like target_market, product, stage, etc.
+        enrichment: Optional dict with scrape enrichment data (competitive_positioning, etc.)
 
     Returns:
         {
@@ -74,6 +75,7 @@ def score_input_quality(company_context: dict) -> dict:
     issues = []
     warnings = []
     score = 100
+    enrichment = enrichment or {}
 
     # --- Target market / ICP ---
     target_market = company_context.get("target_market", "").strip()
@@ -149,7 +151,38 @@ def score_input_quality(company_context: dict) -> dict:
     # --- Current challenges ---
     challenges = company_context.get("current_challenges", company_context.get("current challenges", "")).strip()
     if not challenges or challenges.lower() in ("none", "n/a", "not specified"):
-        warnings.append("No challenges listed. Agents will focus on general best practices rather than your specific blockers.")
+        # If scrape found competitive positioning, reduce warning severity
+        if enrichment.get("competitive_positioning"):
+            warnings.append("No challenges listed, but competitive positioning was scraped — agents will use that context.")
+        else:
+            warnings.append("No challenges listed. Agents will focus on general best practices rather than your specific blockers.")
+
+    # --- Enrichment-aware adjustments ---
+    if enrichment.get("competitive_positioning") or enrichment.get("pricing_signals"):
+        # Rich scrape data compensates for sparse manual input
+        score = min(100, score + 5)
+
+    # If scrape provided detailed product description but user's is short, reduce penalty
+    if product and len(product.split()) < MIN_PRODUCT_DESC_WORDS:
+        # Check if enrichment has better data
+        for key in ("product_description", "competitive_positioning"):
+            enriched_val = enrichment.get(key, "")
+            if enriched_val and len(enriched_val.split()) >= MIN_PRODUCT_DESC_WORDS:
+                # Reduce penalty — scrape compensates
+                score = min(100, score + 10)
+                break
+
+    # --- URL-only detection ---
+    company_url = company_context.get("company_url", company_context.get("website", "")).strip()
+    if company_url and company_url not in ("", "Not provided"):
+        # Check if fields look like auto-filled defaults (very short or generic)
+        short_fields = 0
+        for field_key in ("product_description", "product", "target_market"):
+            val = company_context.get(field_key, "").strip()
+            if val and len(val.split()) < 8:
+                short_fields += 1
+        if short_fields >= 2:
+            warnings.append("Fields appear auto-filled from URL. Manually refined fields produce sharper outputs.")
 
     # Clamp score
     score = max(0, min(100, score))

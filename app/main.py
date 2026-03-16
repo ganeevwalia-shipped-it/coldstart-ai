@@ -27,11 +27,12 @@ from app.agents.rules import (
     score_input_quality,
 )
 from app.agents.knowledge import get_knowledge_context
-from app.agents.schemas import get_format_instructions, validate_output_structure
+from app.agents.schemas import get_format_instructions, validate_output_structure, score_output_quality
 from app.agents.clarifier import get_clarifying_questions, get_plan_variants
 from app.connectors.csv_connector import generate_csv, generate_platform_csv
 from app.connectors.base import get_connector
 from app.connectors import hubspot as _hubspot_import  # noqa: F401 — register connector
+from app.connectors import meta_ads as _meta_import  # noqa: F401 — register connector
 from app.validation import (
     validate_agent_id,
     validate_company_context,
@@ -41,6 +42,7 @@ from app.validation import (
     validate_export_results,
     generate_limiter,
     export_limiter,
+    track_limiter,
 )
 
 logger = logging.getLogger("coldstart")
@@ -105,9 +107,62 @@ async def health():
     })
 
 
+def _strip_html(raw_html: str) -> str:
+    """Strip scripts, styles, and tags from HTML. Returns clean text."""
+    import re as _re
+    text = _re.sub(r"<script[^>]*>.*?</script>", "", raw_html, flags=_re.DOTALL)
+    text = _re.sub(r"<style[^>]*>.*?</style>", "", text, flags=_re.DOTALL)
+    text = _re.sub(r"<[^>]+>", " ", text)
+    text = _re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def _fetch_site_pages(base_url: str) -> dict[str, str]:
+    """
+    Fetch multiple pages from a site for richer context.
+    Returns {path: cleaned_text} capped at 12KB total.
+    """
+    import urllib.request
+    import urllib.error
+    from urllib.parse import urljoin
+
+    candidate_paths = [
+        "/", "/about", "/about-us", "/pricing", "/product", "/features",
+        "/careers", "/jobs", "/about/team", "/investors", "/funding",
+    ]
+    pages: dict[str, str] = {}
+    total_chars = 0
+    max_total = 12000
+
+    for path in candidate_paths:
+        if total_chars >= max_total:
+            break
+        page_url = urljoin(base_url, path)
+        try:
+            req = urllib.request.Request(page_url, headers={
+                "User-Agent": "Mozilla/5.0 (compatible; ColdStartAI/1.0)"
+            })
+            with urllib.request.urlopen(req, timeout=6) as resp:
+                if resp.status != 200:
+                    continue
+                raw_html = resp.read().decode("utf-8", errors="ignore")[:15000]
+            text = _strip_html(raw_html)
+            if len(text) < 50:
+                continue  # skip empty/trivial pages
+            # Cap this page to fit within total budget
+            remaining = max_total - total_chars
+            text = text[:remaining]
+            pages[path] = text
+            total_chars += len(text)
+        except Exception:
+            continue
+
+    return pages
+
+
 @app.post("/api/scrape")
 async def scrape_url(request: Request):
-    """Scrape a URL and extract company context using Claude."""
+    """Scrape a URL (multi-page) and extract company context using Claude."""
     body = await request.json()
     url = body.get("url", "").strip()
 
@@ -126,47 +181,62 @@ async def scrape_url(request: Request):
             "product_description": "Tell us what your product does and who it helps.",
             "target_market": "",
             "inferred_vertical": "B2B SaaS",
+            "competitive_positioning": "",
+            "pricing_signals": "",
+            "company_stage_signals": "",
+            "tech_stack_signals": "",
+            "team_size_signals": "",
+            "key_integrations": "",
+            "funding_signals": "",
+            "hiring_signals": "",
             "demo": True,
         })
 
-    try:
-        import urllib.request
-        import urllib.error
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=8) as resp:
-            raw_html = resp.read().decode("utf-8", errors="ignore")[:12000]
-    except Exception:
-        return JSONResponse({
-            "company_name": "",
-            "product_description": "",
-            "target_market": "",
-            "inferred_vertical": "",
-            "scrape_failed": True,
-        })
+    empty_response = {
+        "company_name": "", "product_description": "", "target_market": "",
+        "inferred_vertical": "", "competitive_positioning": "", "pricing_signals": "",
+        "company_stage_signals": "", "tech_stack_signals": "", "team_size_signals": "",
+        "key_integrations": "", "funding_signals": "", "hiring_signals": "",
+        "scrape_failed": True,
+    }
 
-    # Strip tags roughly
+    pages = _fetch_site_pages(url)
+    if not pages:
+        return JSONResponse(empty_response)
+
+    # Combine pages with labels
+    combined_text = ""
+    for path, text in pages.items():
+        label = path.strip("/").replace("-", " ").title() or "Homepage"
+        combined_text += f"\n\n--- {label} ---\n{text}"
+
     import re
-    text = re.sub(r"<script[^>]*>.*?</script>", "", raw_html, flags=re.DOTALL)
-    text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL)
-    text = re.sub(r"<[^>]+>", " ", text)
-    text = re.sub(r"\s+", " ", text).strip()[:4000]
-
     ai = get_client()
     msg = await ai.messages.create(
         model="claude-sonnet-4-20250514",
-        max_tokens=600,
+        max_tokens=1000,
         messages=[{
             "role": "user",
-            "content": f"""Extract structured information from this website text. Return ONLY valid JSON, no markdown.
+            "content": f"""Extract structured information from this website content (multiple pages). Return ONLY valid JSON, no markdown.
 
-Website text:
-{text}
+If you recognize this company, use your world knowledge to supplement what's visible on the site.
+
+Website content:
+{combined_text}
 
 Return JSON with these exact keys:
 - company_name: the product or company name (string)
-- product_description: 2-3 sentence description of what the product does (string)
-- target_market: who their customers are, as specific as possible (string)
+- product_description: 2-3 sentence description of what the product does and the problem it solves (string)
+- target_market: who their customers are — be as specific as possible with job titles, company types, and pain points (string)
 - inferred_vertical: one of: B2B SaaS, Dev Tools, Fintech, Marketplace, E-commerce/DTC, AI/ML, Agency, Consumer App (string)
+- competitive_positioning: how they differentiate from alternatives, what they claim to do better (string)
+- pricing_signals: visible pricing model — e.g. "freemium", "$49/mo starter tier", "enterprise contact-us", "free trial" (string)
+- company_stage_signals: indicators of company stage — e.g. "just launched", "hiring aggressively", "Series B funded", "10K+ customers" (string)
+- tech_stack_signals: any visible technology indicators — frameworks, APIs, infrastructure mentioned (string)
+- team_size_signals: estimated team size from about page, team grid, or other indicators (string)
+- key_integrations: list of integrations, partners, or platforms they connect with (string)
+- funding_signals: visible funding rounds, investors, total raised — e.g. "Series A, $5M from Sequoia", "bootstrapped", "YC W24" (string)
+- hiring_signals: open roles and hiring patterns — e.g. "hiring 5 engineers", "opening first sales role", "20 open positions across engineering and sales" (string)
 
 If you cannot determine a field, use empty string."""
         }]
@@ -180,7 +250,7 @@ If you cannot determine a field, use empty string."""
         data = json.loads(raw)
         return JSONResponse(data)
     except Exception:
-        return JSONResponse({"company_name": "", "product_description": "", "target_market": "", "inferred_vertical": ""})
+        return JSONResponse(empty_response)
 
 
 @app.post("/api/score-input")
@@ -243,6 +313,7 @@ async def generate_single(request: Request):
         )
         content = message.content[0].text
         schema_validation = validate_output_structure(agent_id, content)
+        quality_score = score_output_quality(agent_id, content, company_context)
         return JSONResponse({
             "status": "complete",
             "agent_id": agent_id,
@@ -251,6 +322,7 @@ async def generate_single(request: Request):
             "deliverable": agent["deliverable"],
             "content": content,
             "schema_validation": schema_validation,
+            "quality_score": quality_score,
         })
     except Exception as e:
         return JSONResponse({
@@ -325,6 +397,7 @@ async def generate_chained(request: Request):
         )
         content = message.content[0].text
         schema_validation = validate_output_structure(agent_id, content)
+        quality_score = score_output_quality(agent_id, content, company_context)
         return JSONResponse({
             "status": "complete",
             "agent_id": agent_id,
@@ -333,6 +406,7 @@ async def generate_chained(request: Request):
             "deliverable": agent["deliverable"],
             "content": content,
             "schema_validation": schema_validation,
+            "quality_score": quality_score,
         })
     except Exception as e:
         return JSONResponse({
@@ -409,6 +483,7 @@ async def refine_agent(request: Request):
         )
         content = message.content[0].text
         schema_validation = validate_output_structure(agent_id, content)
+        quality_score = score_output_quality(agent_id, content, company_context)
         return JSONResponse({
             "status": "complete",
             "agent_id": agent_id,
@@ -417,6 +492,7 @@ async def refine_agent(request: Request):
             "deliverable": agent["deliverable"],
             "content": content,
             "schema_validation": schema_validation,
+            "quality_score": quality_score,
             "refined": True,
         })
     except Exception as e:
@@ -657,10 +733,48 @@ async def export_to_hubspot(request: Request):
     return JSONResponse(result)
 
 
+@app.post("/api/export-to/meta-ads")
+async def export_to_meta_ads(request: Request):
+    """Push agent output directly to Meta Ads via Marketing API."""
+    client_ip = export_limiter.get_client_ip(request)
+    if not export_limiter.check(client_ip):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded.")
+
+    body = await request.json()
+    agent_id = body.get("agent_id", "")
+    content = validate_text_field(body.get("content", ""), "content", max_length=100_000)
+    credentials = body.get("credentials", {})
+
+    if not isinstance(credentials, dict):
+        raise HTTPException(status_code=400, detail="credentials must be a dict")
+    if not credentials.get("access_token"):
+        raise HTTPException(status_code=400, detail="Meta access_token required in credentials")
+    if not credentials.get("ad_account_id"):
+        raise HTTPException(status_code=400, detail="Meta ad_account_id required in credentials")
+
+    access_token = credentials["access_token"]
+    ad_account_id = credentials["ad_account_id"]
+    if not isinstance(access_token, str) or len(access_token) > 500:
+        raise HTTPException(status_code=400, detail="Invalid access token format")
+    if not isinstance(ad_account_id, str) or len(ad_account_id) > 50:
+        raise HTTPException(status_code=400, detail="Invalid ad account ID format")
+
+    connector = get_connector("meta_ads")
+    if not connector:
+        raise HTTPException(status_code=500, detail="Meta Ads connector not available")
+
+    result = await connector.export(
+        agent_id=agent_id,
+        parsed_data={"raw": content},
+        credentials={"access_token": access_token, "ad_account_id": ad_account_id},
+    )
+    return JSONResponse(result)
+
+
 @app.post("/api/test-connection/{platform}")
 async def test_connection(platform: str, request: Request):
     """Test connection to an external platform."""
-    if platform not in ("hubspot",):
+    if platform not in ("hubspot", "meta_ads"):
         raise HTTPException(status_code=400, detail=f"Unsupported platform: {platform}")
 
     body = await request.json()
@@ -672,6 +786,40 @@ async def test_connection(platform: str, request: Request):
 
     valid = connector.validate_credentials(credentials)
     return JSONResponse({"status": "connected" if valid else "failed", "platform": platform})
+
+
+TRACKING_LOG_PATH = os.path.join(os.path.dirname(__file__), "..", "tracking_log.jsonl")
+
+VALID_TRACK_EVENTS = {"export", "refine", "view", "skip"}
+
+
+@app.post("/api/track")
+async def track_event(request: Request):
+    """Track user interactions for feedback loop analysis."""
+    client_ip = track_limiter.get_client_ip(request)
+    if not track_limiter.check(client_ip):
+        return JSONResponse({"status": "rate_limited"}, status_code=429)
+
+    body = await request.json()
+    event = body.get("event", "")
+    if event not in VALID_TRACK_EVENTS:
+        return JSONResponse({"status": "invalid_event"}, status_code=400)
+
+    import json as _json
+    entry = {
+        "timestamp": datetime.now().isoformat(),
+        "event": event,
+        "agent_id": body.get("agent_id", ""),
+        "mode": body.get("mode", ""),
+        "quality_score": body.get("quality_score"),
+    }
+    try:
+        with open(TRACKING_LOG_PATH, "a") as f:
+            f.write(_json.dumps(entry) + "\n")
+    except OSError:
+        logger.warning("Could not write tracking log")
+
+    return JSONResponse({"status": "ok"})
 
 
 def slug_name(s: str) -> str:
