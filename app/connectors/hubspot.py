@@ -65,16 +65,17 @@ class HubSpotConnector(BaseConnector):
         parsed = parse_agent_output(agent_id, content)
         data = parsed["data"]
 
-        if agent_id == "crm_architect":
-            return await self._export_crm(data, headers)
-        elif agent_id == "outbound_engineer":
-            return await self._export_emails(data, headers)
-        elif agent_id == "icp_architect":
-            return await self._export_contacts(data, headers)
-        else:
-            return {"status": "error", "message": f"Agent {agent_id} not supported for HubSpot export"}
+        async with httpx.AsyncClient(headers=headers, timeout=10) as client:
+            if agent_id == "crm_architect":
+                return await self._export_crm(data, client)
+            elif agent_id == "outbound_engineer":
+                return await self._export_emails(data, client)
+            elif agent_id == "icp_architect":
+                return await self._export_contacts(data, client)
+            else:
+                return {"status": "error", "message": f"Agent {agent_id} not supported for HubSpot export"}
 
-    async def _export_crm(self, data: dict, headers: dict) -> dict:
+    async def _export_crm(self, data: dict, client: httpx.AsyncClient) -> dict:
         """Export CRM pipeline stages and custom properties to HubSpot."""
         results = {"created": [], "errors": []}
 
@@ -93,19 +94,16 @@ class HubSpotConnector(BaseConnector):
                 "description": field.get("why_it_matters", ""),
             }
             try:
-                async with httpx.AsyncClient() as client:
-                    resp = await client.post(
-                        f"{HUBSPOT_API_BASE}/crm/v3/properties/contacts",
-                        headers=headers,
-                        json=payload,
-                        timeout=10,
-                    )
-                    if resp.status_code in (200, 201):
-                        results["created"].append(f"Contact property: {field_name}")
-                    elif resp.status_code == 409:
-                        results["created"].append(f"Contact property already exists: {field_name}")
-                    else:
-                        results["errors"].append(f"Contact property {field_name}: {resp.status_code}")
+                resp = await client.post(
+                    f"{HUBSPOT_API_BASE}/crm/v3/properties/contacts",
+                    json=payload,
+                )
+                if resp.status_code in (200, 201):
+                    results["created"].append(f"Contact property: {field_name}")
+                elif resp.status_code == 409:
+                    results["created"].append(f"Contact property already exists: {field_name}")
+                else:
+                    results["errors"].append(f"Contact property {field_name}: {resp.status_code}")
             except Exception as e:
                 results["errors"].append(f"Contact property {field_name}: {str(e)}")
 
@@ -124,26 +122,23 @@ class HubSpotConnector(BaseConnector):
                 "description": field.get("why_it_matters", ""),
             }
             try:
-                async with httpx.AsyncClient() as client:
-                    resp = await client.post(
-                        f"{HUBSPOT_API_BASE}/crm/v3/properties/deals",
-                        headers=headers,
-                        json=payload,
-                        timeout=10,
-                    )
-                    if resp.status_code in (200, 201):
-                        results["created"].append(f"Deal property: {field_name}")
-                    elif resp.status_code == 409:
-                        results["created"].append(f"Deal property already exists: {field_name}")
-                    else:
-                        results["errors"].append(f"Deal property {field_name}: {resp.status_code}")
+                resp = await client.post(
+                    f"{HUBSPOT_API_BASE}/crm/v3/properties/deals",
+                    json=payload,
+                )
+                if resp.status_code in (200, 201):
+                    results["created"].append(f"Deal property: {field_name}")
+                elif resp.status_code == 409:
+                    results["created"].append(f"Deal property already exists: {field_name}")
+                else:
+                    results["errors"].append(f"Deal property {field_name}: {resp.status_code}")
             except Exception as e:
                 results["errors"].append(f"Deal property {field_name}: {str(e)}")
 
         status = "success" if not results["errors"] else "partial"
         return {"status": status, **results}
 
-    async def _export_emails(self, data: dict, headers: dict) -> dict:
+    async def _export_emails(self, data: dict, client: httpx.AsyncClient) -> dict:
         """Export email sequences as HubSpot email templates (marketing emails)."""
         results = {"created": [], "errors": []}
         sequences = data.get("email_sequences", [])
@@ -162,24 +157,21 @@ class HubSpotConnector(BaseConnector):
                 "type": "REGULAR",
             }
             try:
-                async with httpx.AsyncClient() as client:
-                    resp = await client.post(
-                        f"{HUBSPOT_API_BASE}/marketing/v3/emails",
-                        headers=headers,
-                        json=payload,
-                        timeout=10,
-                    )
-                    if resp.status_code in (200, 201):
-                        results["created"].append(f"Email template: Touch {seq.get('touch')}")
-                    else:
-                        results["errors"].append(f"Email Touch {seq.get('touch')}: {resp.status_code}")
+                resp = await client.post(
+                    f"{HUBSPOT_API_BASE}/marketing/v3/emails",
+                    json=payload,
+                )
+                if resp.status_code in (200, 201):
+                    results["created"].append(f"Email template: Touch {seq.get('touch')}")
+                else:
+                    results["errors"].append(f"Email Touch {seq.get('touch')}: {resp.status_code}")
             except Exception as e:
                 results["errors"].append(f"Email Touch {seq.get('touch')}: {str(e)}")
 
         status = "success" if not results["errors"] else "partial"
         return {"status": status, **results}
 
-    async def _export_contacts(self, data: dict, headers: dict) -> dict:
+    async def _export_contacts(self, data: dict, client: httpx.AsyncClient) -> dict:
         """Note: ICP architect doesn't generate actual contact records.
         This exports the ICP as a note/description for reference."""
         primary_icp = data.get("primary_icp", "")

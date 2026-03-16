@@ -67,15 +67,16 @@ class MetaAdsConnector(BaseConnector):
         parsed = parse_agent_output(agent_id, content)
         data = parsed["data"]
 
-        if agent_id == "icp_architect":
-            return await self._export_audiences(data, content, token, ad_account_id)
-        elif agent_id == "channel_mapper":
-            return await self._export_campaign(data, content, token, ad_account_id)
-        else:
-            return {"status": "error", "message": f"Agent {agent_id} not supported for Meta Ads export"}
+        async with httpx.AsyncClient(params={"access_token": token}, timeout=10) as client:
+            if agent_id == "icp_architect":
+                return await self._export_audiences(data, content, client, ad_account_id)
+            elif agent_id == "channel_mapper":
+                return await self._export_campaign(data, content, client, ad_account_id)
+            else:
+                return {"status": "error", "message": f"Agent {agent_id} not supported for Meta Ads export"}
 
     async def _export_audiences(
-        self, data: dict, content: str, token: str, ad_account_id: str
+        self, data: dict, content: str, client: httpx.AsyncClient, ad_account_id: str
     ) -> dict:
         """Export ICP audience definitions as Meta Saved Audiences."""
         results: dict[str, Any] = {"created": [], "errors": []}
@@ -100,25 +101,22 @@ class MetaAdsConnector(BaseConnector):
             payload = {
                 "name": f"Cold Start AI - {audience['name']}",
                 "targeting": audience["targeting"],
-                "access_token": token,
             }
             try:
-                async with httpx.AsyncClient() as client:
-                    resp = await client.post(
-                        f"{META_API_BASE}/{ad_account_id}/saved_audiences",
-                        json=payload,
-                        timeout=10,
+                resp = await client.post(
+                    f"{META_API_BASE}/{ad_account_id}/saved_audiences",
+                    json=payload,
+                )
+                if resp.status_code in (200, 201):
+                    resp_data = resp.json()
+                    results["created"].append(
+                        f"Saved Audience: {audience['name']} (ID: {resp_data.get('id', 'N/A')})"
                     )
-                    if resp.status_code in (200, 201):
-                        resp_data = resp.json()
-                        results["created"].append(
-                            f"Saved Audience: {audience['name']} (ID: {resp_data.get('id', 'N/A')})"
-                        )
-                    else:
-                        error_msg = resp.text[:200]
-                        results["errors"].append(
-                            f"Audience '{audience['name']}': {resp.status_code} - {error_msg}"
-                        )
+                else:
+                    error_msg = resp.text[:200]
+                    results["errors"].append(
+                        f"Audience '{audience['name']}': {resp.status_code} - {error_msg}"
+                    )
             except Exception as e:
                 results["errors"].append(f"Audience '{audience['name']}': {str(e)}")
 
@@ -128,7 +126,7 @@ class MetaAdsConnector(BaseConnector):
         return {"status": status, **results}
 
     async def _export_campaign(
-        self, data: dict, content: str, token: str, ad_account_id: str
+        self, data: dict, content: str, client: httpx.AsyncClient, ad_account_id: str
     ) -> dict:
         """Export channel mapper recommendations as a Meta campaign structure."""
         results: dict[str, Any] = {"created": [], "errors": []}
@@ -141,23 +139,20 @@ class MetaAdsConnector(BaseConnector):
             "objective": "OUTCOME_LEADS",
             "status": "PAUSED",
             "special_ad_categories": [],
-            "access_token": token,
         }
 
         try:
-            async with httpx.AsyncClient() as client:
-                resp = await client.post(
-                    f"{META_API_BASE}/{ad_account_id}/campaigns",
-                    json=payload,
-                    timeout=10,
-                )
-                if resp.status_code in (200, 201):
-                    resp_data = resp.json()
-                    campaign_id = resp_data.get("id", "")
-                    results["created"].append(f"Campaign: {campaign_name} (ID: {campaign_id})")
-                else:
-                    error_msg = resp.text[:200]
-                    results["errors"].append(f"Campaign creation: {resp.status_code} - {error_msg}")
+            resp = await client.post(
+                f"{META_API_BASE}/{ad_account_id}/campaigns",
+                json=payload,
+            )
+            if resp.status_code in (200, 201):
+                resp_data = resp.json()
+                campaign_id = resp_data.get("id", "")
+                results["created"].append(f"Campaign: {campaign_name} (ID: {campaign_id})")
+            else:
+                error_msg = resp.text[:200]
+                results["errors"].append(f"Campaign creation: {resp.status_code} - {error_msg}")
         except Exception as e:
             results["errors"].append(f"Campaign creation: {str(e)}")
 

@@ -56,16 +56,6 @@ You MUST include ALL of the following sections in your output:
             "Rebuttals",
             "Messaging Hierarchy",
             "Copy Bank",
-        ],
-        "required_sections": [
-            "Core Positioning",
-            "One-Liner",
-            "Value Props",
-            "Proof Points",
-            "Objections",
-            "Rebuttals",
-            "Messaging Hierarchy",
-            "Copy Bank",
             "Website Section Copy",
         ],
         "format_instructions": """

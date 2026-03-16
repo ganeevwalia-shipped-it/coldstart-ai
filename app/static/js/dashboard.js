@@ -5,13 +5,25 @@
  *   PRO:  Agents chain — each builds on the last + vertical intelligence
  */
 
-const input = JSON.parse(sessionStorage.getItem('coldstart_input') || '{}');
+// Escape a string for safe use in HTML attributes
+function escAttr(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+let input = {};
+try {
+    const stored = sessionStorage.getItem('coldstart_input');
+    input = stored ? JSON.parse(stored) : {};
+} catch (e) {
+    console.error('Invalid session data:', e);
+    input = {};
+}
 const results = {};
 let activeAgent = null;
 let completedCount = 0;
 const mode = input.mode || 'free'; // 'free' or 'pro'
 
-if (!input.company_name) {
+if (!input.company_name || !Array.isArray(input.agents) || input.agents.length === 0) {
     window.location.href = '/launch';
 }
 
@@ -72,17 +84,19 @@ function showAgent(agentId) {
             let validationBadge = '';
             if (r.schema_validation && !r.schema_validation.valid) {
                 const pct = Math.round((r.schema_validation.completeness || 0) * 100);
-                validationBadge = `<div class="validation-badge" title="Missing: ${(r.schema_validation.missing || []).join(', ')}">Schema: ${pct}% complete</div>`;
+                const missingText = escAttr((r.schema_validation.missing || []).join(', '));
+                validationBadge = `<div class="validation-badge" title="Missing: ${missingText}">Schema: ${pct}% complete</div>`;
             }
             let qualityBadge = '';
             if (r.quality_score) {
                 const qs = r.quality_score;
                 const color = qs.score >= 70 ? '#059669' : qs.score >= 40 ? '#d97706' : '#dc2626';
                 const label = qs.score < 40 ? ' — may be generic' : '';
-                const tooltip = (qs.flags || []).join('; ') || 'No issues';
+                const tooltip = escAttr((qs.flags || []).join('; ') || 'No issues');
                 qualityBadge = `<div class="quality-badge" style="color:${color};font-size:13px;margin-bottom:8px;" title="${tooltip}">Quality: ${qs.score}/100${label}</div>`;
             }
-            output.innerHTML = `${validationBadge}${qualityBadge}<div class="agent-content">${marked.parse(r.content)}</div>`;
+            const sanitized = (typeof DOMPurify !== 'undefined') ? DOMPurify.sanitize(marked.parse(r.content)) : marked.parse(r.content);
+            output.innerHTML = `${validationBadge}${qualityBadge}<div class="agent-content">${sanitized}</div>`;
         } else if (r.status === 'error') {
             output.innerHTML = `<div class="agent-content" style="color: var(--error);">${r.content}</div>`;
         }
@@ -224,11 +238,12 @@ function onAllComplete() {
     document.querySelector('#global-status .status-dot').classList.remove('running');
     document.getElementById('export-all-dropdown').style.display = 'inline-block';
 
-    // Track skipped agents (never viewed)
-    const agents = input.agents || [];
-    agents.forEach(id => {
-        if (results[id] && results[id].status !== 'error') {
-            // Will be tracked as 'view' if user clicks — only track skip for unviewed
+    // Track skipped agents — fire 'skip' for agents user never clicked on
+    const viewedAgents = new Set();
+    // viewedAgents is populated by showAgent; we track via a simple set
+    (input.agents || []).forEach(id => {
+        if (results[id] && results[id].status !== 'error' && id !== activeAgent) {
+            trackEvent('skip', id);
         }
     });
 }

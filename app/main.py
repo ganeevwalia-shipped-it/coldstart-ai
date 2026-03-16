@@ -6,9 +6,12 @@ Two modes:
   FREE: All agents run independently (same base context)
   PRO:  Agents chain — each builds on the outputs before it + vertical intelligence
 """
+import ipaddress
+import json as _json_module
 import os
 import io
 import logging
+import re
 import zipfile
 from datetime import datetime
 from fastapi import FastAPI, Request, HTTPException
@@ -107,13 +110,59 @@ async def health():
     })
 
 
+_SCRAPE_TIMEOUT = 6
+_MAX_RAW_HTML = 15_000
+_MIN_PAGE_TEXT = 50
+_MAX_TOTAL_SCRAPE = 12_000
+
+# Private/reserved IP ranges that should never be fetched (SSRF protection)
+_BLOCKED_NETWORKS = [
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+    ipaddress.ip_network("127.0.0.0/8"),
+    ipaddress.ip_network("169.254.0.0/16"),  # link-local / AWS metadata
+    ipaddress.ip_network("0.0.0.0/8"),
+    ipaddress.ip_network("::1/128"),
+    ipaddress.ip_network("fc00::/7"),  # IPv6 private
+    ipaddress.ip_network("fe80::/10"),  # IPv6 link-local
+]
+
+
+def _is_safe_url(url: str) -> bool:
+    """Check that a URL doesn't point to a private/internal IP (SSRF protection)."""
+    import socket
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url)
+    hostname = parsed.hostname
+    if not hostname:
+        return False
+
+    # Block common internal hostnames
+    if hostname in ("localhost", "metadata.google.internal"):
+        return False
+
+    try:
+        resolved = socket.getaddrinfo(hostname, None)
+        for family, _, _, _, addr in resolved:
+            ip = ipaddress.ip_address(addr[0])
+            for network in _BLOCKED_NETWORKS:
+                if ip in network:
+                    logger.warning("SSRF blocked: %s resolved to private IP %s", url, ip)
+                    return False
+    except (socket.gaierror, ValueError):
+        return False
+
+    return True
+
+
 def _strip_html(raw_html: str) -> str:
     """Strip scripts, styles, and tags from HTML. Returns clean text."""
-    import re as _re
-    text = _re.sub(r"<script[^>]*>.*?</script>", "", raw_html, flags=_re.DOTALL)
-    text = _re.sub(r"<style[^>]*>.*?</style>", "", text, flags=_re.DOTALL)
-    text = _re.sub(r"<[^>]+>", " ", text)
-    text = _re.sub(r"\s+", " ", text).strip()
+    text = re.sub(r"<script[^>]*>.*?</script>", "", raw_html, flags=re.DOTALL)
+    text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
     return text
 
 
@@ -132,25 +181,27 @@ def _fetch_site_pages(base_url: str) -> dict[str, str]:
     ]
     pages: dict[str, str] = {}
     total_chars = 0
-    max_total = 12000
 
     for path in candidate_paths:
-        if total_chars >= max_total:
+        if total_chars >= _MAX_TOTAL_SCRAPE:
             break
         page_url = urljoin(base_url, path)
+
+        if not _is_safe_url(page_url):
+            continue
+
         try:
             req = urllib.request.Request(page_url, headers={
                 "User-Agent": "Mozilla/5.0 (compatible; ColdStartAI/1.0)"
             })
-            with urllib.request.urlopen(req, timeout=6) as resp:
+            with urllib.request.urlopen(req, timeout=_SCRAPE_TIMEOUT) as resp:
                 if resp.status != 200:
                     continue
-                raw_html = resp.read().decode("utf-8", errors="ignore")[:15000]
+                raw_html = resp.read().decode("utf-8", errors="ignore")[:_MAX_RAW_HTML]
             text = _strip_html(raw_html)
-            if len(text) < 50:
-                continue  # skip empty/trivial pages
-            # Cap this page to fit within total budget
-            remaining = max_total - total_chars
+            if len(text) < _MIN_PAGE_TEXT:
+                continue
+            remaining = _MAX_TOTAL_SCRAPE - total_chars
             text = text[:remaining]
             pages[path] = text
             total_chars += len(text)
@@ -192,17 +243,15 @@ async def scrape_url(request: Request):
             "demo": True,
         })
 
-    empty_response = {
-        "company_name": "", "product_description": "", "target_market": "",
-        "inferred_vertical": "", "competitive_positioning": "", "pricing_signals": "",
-        "company_stage_signals": "", "tech_stack_signals": "", "team_size_signals": "",
-        "key_integrations": "", "funding_signals": "", "hiring_signals": "",
-        "scrape_failed": True,
-    }
+    if not _is_safe_url(url):
+        return JSONResponse({"error": "URL not allowed"}, status_code=400)
 
     pages = _fetch_site_pages(url)
     if not pages:
-        return JSONResponse(empty_response)
+        return JSONResponse(
+            {"error": "Could not fetch content from URL"},
+            status_code=502,
+        )
 
     # Combine pages with labels
     combined_text = ""
@@ -210,14 +259,14 @@ async def scrape_url(request: Request):
         label = path.strip("/").replace("-", " ").title() or "Homepage"
         combined_text += f"\n\n--- {label} ---\n{text}"
 
-    import re
-    ai = get_client()
-    msg = await ai.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=1000,
-        messages=[{
-            "role": "user",
-            "content": f"""Extract structured information from this website content (multiple pages). Return ONLY valid JSON, no markdown.
+    try:
+        ai = get_client()
+        msg = await ai.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1000,
+            messages=[{
+                "role": "user",
+                "content": f"""Extract structured information from this website content (multiple pages). Return ONLY valid JSON, no markdown.
 
 If you recognize this company, use your world knowledge to supplement what's visible on the site.
 
@@ -239,18 +288,27 @@ Return JSON with these exact keys:
 - hiring_signals: open roles and hiring patterns — e.g. "hiring 5 engineers", "opening first sales role", "20 open positions across engineering and sales" (string)
 
 If you cannot determine a field, use empty string."""
-        }]
-    )
+            }]
+        )
+    except Exception:
+        logger.exception("Claude API call failed during scrape extraction")
+        return JSONResponse(
+            {"error": "Content extraction failed"},
+            status_code=500,
+        )
 
     try:
-        import json
         raw = msg.content[0].text.strip()
         raw = re.sub(r"^```json\s*", "", raw)
         raw = re.sub(r"```$", "", raw)
-        data = json.loads(raw)
+        data = _json_module.loads(raw)
         return JSONResponse(data)
     except Exception:
-        return JSONResponse(empty_response)
+        logger.warning("Failed to parse Claude extraction response")
+        return JSONResponse(
+            {"error": "Content extraction failed"},
+            status_code=500,
+        )
 
 
 @app.post("/api/score-input")
@@ -268,7 +326,7 @@ async def generate_single(request: Request):
     """
     # Rate limit
     client_ip = generate_limiter.get_client_ip(request)
-    if not generate_limiter.check(client_ip):
+    if not await generate_limiter.check_async(client_ip):
         raise HTTPException(status_code=429, detail="Rate limit exceeded. Try again in a minute.")
 
     body = await request.json()
@@ -325,6 +383,7 @@ async def generate_single(request: Request):
             "quality_score": quality_score,
         })
     except Exception as e:
+        logger.exception("Agent %s failed", agent_id)
         return JSONResponse({
             "status": "error",
             "agent_id": agent_id,
@@ -342,7 +401,7 @@ async def generate_chained(request: Request):
     """
     # Rate limit
     client_ip = generate_limiter.get_client_ip(request)
-    if not generate_limiter.check(client_ip):
+    if not await generate_limiter.check_async(client_ip):
         raise HTTPException(status_code=429, detail="Rate limit exceeded. Try again in a minute.")
 
     body = await request.json()
@@ -409,6 +468,7 @@ async def generate_chained(request: Request):
             "quality_score": quality_score,
         })
     except Exception as e:
+        logger.exception("Agent %s failed", agent_id)
         return JSONResponse({
             "status": "error",
             "agent_id": agent_id,
@@ -436,7 +496,7 @@ async def clarify(request: Request):
 async def refine_agent(request: Request):
     """Re-run a single agent with additional user feedback."""
     client_ip = generate_limiter.get_client_ip(request)
-    if not generate_limiter.check(client_ip):
+    if not await generate_limiter.check_async(client_ip):
         raise HTTPException(status_code=429, detail="Rate limit exceeded. Try again in a minute.")
 
     body = await request.json()
@@ -496,6 +556,7 @@ async def refine_agent(request: Request):
             "refined": True,
         })
     except Exception as e:
+        logger.exception("Agent %s failed", agent_id)
         return JSONResponse({
             "status": "error",
             "agent_id": agent_id,
@@ -518,7 +579,7 @@ async def execution_plan(request: Request):
 @app.post("/api/export")
 async def export_results(request: Request):
     client_ip = export_limiter.get_client_ip(request)
-    if not export_limiter.check(client_ip):
+    if not await export_limiter.check_async(client_ip):
         raise HTTPException(status_code=429, detail="Rate limit exceeded.")
 
     body = await request.json()
@@ -562,7 +623,7 @@ async def export_results(request: Request):
 @app.post("/api/export-single")
 async def export_single(request: Request):
     client_ip = export_limiter.get_client_ip(request)
-    if not export_limiter.check(client_ip):
+    if not await export_limiter.check_async(client_ip):
         raise HTTPException(status_code=429, detail="Rate limit exceeded.")
 
     body = await request.json()
@@ -599,7 +660,7 @@ async def export_single(request: Request):
 async def export_csv(request: Request):
     """Export a single agent's output as CSV file(s)."""
     client_ip = export_limiter.get_client_ip(request)
-    if not export_limiter.check(client_ip):
+    if not await export_limiter.check_async(client_ip):
         raise HTTPException(status_code=429, detail="Rate limit exceeded.")
 
     body = await request.json()
@@ -639,7 +700,7 @@ async def export_csv(request: Request):
 async def export_csv_all(request: Request):
     """Export all agent outputs as a ZIP of CSV files."""
     client_ip = export_limiter.get_client_ip(request)
-    if not export_limiter.check(client_ip):
+    if not await export_limiter.check_async(client_ip):
         raise HTTPException(status_code=429, detail="Rate limit exceeded.")
 
     body = await request.json()
@@ -674,7 +735,7 @@ async def export_csv_all(request: Request):
 async def export_formatted(platform: str, request: Request):
     """Export agent output as platform-formatted CSV (hubspot or apollo)."""
     client_ip = export_limiter.get_client_ip(request)
-    if not export_limiter.check(client_ip):
+    if not await export_limiter.check_async(client_ip):
         raise HTTPException(status_code=429, detail="Rate limit exceeded.")
 
     if platform not in ("hubspot", "apollo"):
@@ -705,7 +766,7 @@ async def export_formatted(platform: str, request: Request):
 async def export_to_hubspot(request: Request):
     """Push agent output directly to HubSpot via API."""
     client_ip = export_limiter.get_client_ip(request)
-    if not export_limiter.check(client_ip):
+    if not await export_limiter.check_async(client_ip):
         raise HTTPException(status_code=429, detail="Rate limit exceeded.")
 
     body = await request.json()
@@ -737,7 +798,7 @@ async def export_to_hubspot(request: Request):
 async def export_to_meta_ads(request: Request):
     """Push agent output directly to Meta Ads via Marketing API."""
     client_ip = export_limiter.get_client_ip(request)
-    if not export_limiter.check(client_ip):
+    if not await export_limiter.check_async(client_ip):
         raise HTTPException(status_code=429, detail="Rate limit exceeded.")
 
     body = await request.json()
@@ -797,7 +858,7 @@ VALID_TRACK_EVENTS = {"export", "refine", "view", "skip"}
 async def track_event(request: Request):
     """Track user interactions for feedback loop analysis."""
     client_ip = track_limiter.get_client_ip(request)
-    if not track_limiter.check(client_ip):
+    if not await track_limiter.check_async(client_ip):
         return JSONResponse({"status": "rate_limited"}, status_code=429)
 
     body = await request.json()

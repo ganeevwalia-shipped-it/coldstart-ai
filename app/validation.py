@@ -2,6 +2,7 @@
 Cold Start AI — Input validation and security.
 Validates all user input before it reaches agents or the API.
 """
+import asyncio
 import re
 import time
 from collections import defaultdict
@@ -96,17 +97,25 @@ def validate_export_results(results: dict) -> dict:
 # ========================================
 
 class RateLimiter:
-    """Simple in-memory rate limiter. For production, use Redis."""
+    """Simple in-memory rate limiter with async lock. For production, use Redis."""
 
     def __init__(self, max_requests: int = 30, window_seconds: int = 60):
         self.max_requests = max_requests
         self.window = window_seconds
         self.requests: dict[str, list[float]] = defaultdict(list)
+        self._lock = asyncio.Lock()
+
+    async def check_async(self, client_ip: str) -> bool:
+        """Async-safe check. Returns True if request is allowed."""
+        async with self._lock:
+            return self._check_inner(client_ip)
 
     def check(self, client_ip: str) -> bool:
-        """Returns True if request is allowed, False if rate limited."""
+        """Sync check (for backwards compatibility). Not thread-safe."""
+        return self._check_inner(client_ip)
+
+    def _check_inner(self, client_ip: str) -> bool:
         now = time.time()
-        # Clean old entries
         self.requests[client_ip] = [
             t for t in self.requests[client_ip]
             if now - t < self.window
